@@ -1,0 +1,196 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+/* ==========================================
+   GLOBAL STYLES
+========================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==========================================
+   DRIVER PROFILE CONTAINER
+========================================== */
+
+.driverprofile-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: "Poppins", sans-serif;
+}
+
+/* ==========================================
+   HEADER / NAVBAR
+========================================== */
+
+.driverprofile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background-color: #1a3c6e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.driverprofile-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.back-btn {
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: white;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   MAIN BODY
+========================================== */
+
+.driverprofile-body {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+/* ==========================================
+   DRIVER INFORMATION CARD
+========================================== */
+
+.driver-info-card {
+  margin-bottom: 28px;
+  padding: 32px 24px;
+  border: 1px solid #d6e8f8;
+  border-radius: 14px;
+  background: white;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(26, 60, 110, 0.07);
+}
+
+.driver-avatar {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 14px;
+  border: 3px solid #d6e8f8;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.driver-name {
+  margin-bottom: 10px;
+  color: #1a3c6e;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.driver-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px;
+  border: 1px solid #b8d4f0;
+  border-radius: 20px;
+  background: #eaf3ff;
+  color: #2d6ab4;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.driver-rating .star {
+  color: #f5a623;
+  font-size: 16px;
+}
+
+.driver-review-count {
+  margin-top: 8px;
+  color: #7a9abf;
+  font-size: 13px;
+}
+
+/* ==========================================
+   REVIEWS SECTION
+========================================== */
+
+.reviews-section h3 {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8f1fb;
+  color: #1a3c6e;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.reviews-empty {
+  padding: 20px 0;
+  color: #7a9abf;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ==========================================
+   REVIEW CARDS
+========================================== */
+
+.review-card {
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid #d6e8f8;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 1px 6px rgba(26, 60, 110, 0.05);
+}
+
+.review-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.review-passenger {
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.review-stars {
+  color: #f5a623;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.review-date {
+  margin-bottom: 8px;
+  color: #7a9abf;
+  font-size: 12px;
+}
+
+.review-text {
+  color: #5a7fa8;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+========================================== */
+
+@media (max-width: 600px) {
+  .driverprofile-body {
+    padding: 20px 14px 48px;
+  }
+}

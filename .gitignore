@@ -1,0 +1,35 @@
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Firebase credentials
+serviceAccountKey.json
+*serviceAccountKey*.json
+
+# Build files
+dist/
+dist-ssr/
+build/
+
+# Logs
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.local
+
+# Private driving licence images
+carpool-frontend/public/images/Driver's license*.png
+carpool-frontend/public/images/Driving license photo.jpg

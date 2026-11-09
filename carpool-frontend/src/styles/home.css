@@ -1,0 +1,392 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ── Global ── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ── Page ── */
+.home-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+}
+
+/* ── Navbar ── */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background-color: #1a3c6e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.home-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-user {
+  color: #a8c4e8;
+  font-size: 13px;
+}
+
+/* ── Buttons ── */
+.home-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-btn.primary {
+  background-color: #4a90d9;
+  color: white;
+}
+
+.home-btn.primary:hover {
+  background-color: #357abd;
+}
+
+.home-btn.ghost {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background-color: transparent;
+  color: #a8c4e8;
+}
+
+.home-btn.ghost:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* ── Hero ── */
+.home-hero {
+  padding: 36px 28px 80px;
+  background: linear-gradient(135deg, #1a3c6e 0%, #2d6ab4 100%);
+  color: white;
+  text-align: center;
+}
+
+.home-hero h2 {
+  margin-bottom: 6px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.home-hero p {
+  color: #b8d4f0;
+  font-size: 13px;
+}
+
+/* ── Advanced Search ── */
+.advanced-search-wrapper {
+  position: relative;
+  z-index: 10;
+  margin: -48px 0 28px;
+  padding: 0 28px;
+}
+
+.advanced-search {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  padding: 6px 6px 6px 0;
+  border: 1px solid #d6e8f8;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 6px 28px rgba(26, 60, 110, 0.14);
+}
+
+.search-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px 18px;
+}
+
+.search-field label {
+  margin-bottom: 3px;
+  color: #3a6090;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.search-field input {
+  width: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #1a3c6e;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+}
+
+.search-field input::placeholder {
+  color: #b0c8e0;
+  font-weight: 400;
+}
+
+.search-field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  filter: invert(30%) sepia(60%) saturate(400%) hue-rotate(190deg);
+}
+
+.search-divider {
+  width: 1px;
+  height: 36px;
+  flex-shrink: 0;
+  background-color: #d6e8f8;
+}
+
+.search-main-btn {
+  flex-shrink: 0;
+  margin: 4px 4px 4px 6px;
+  padding: 13px 24px;
+  border: none;
+  border-radius: 10px;
+  background-color: #1a3c6e;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.search-main-btn:hover {
+  background-color: #163260;
+  transform: translateY(-1px);
+}
+
+/* ── Section Header ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 28px 14px;
+}
+
+.section-header h3 {
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.section-header span {
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: #ddeeff;
+  color: #2d6ab4;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Ride Grid ── */
+.rides-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 0 28px 40px;
+}
+
+/* ── Ride Card ── */
+.ride-card {
+  overflow: hidden;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.07);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ride-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(26, 60, 110, 0.13);
+}
+
+.ride-card img {
+  display: block;
+  width: 100%;
+  height: 165px;
+  border-bottom: 1px solid #e8f1fb;
+  object-fit: cover;
+}
+
+.ride-car-name {
+  padding: 6px 14px;
+  border-bottom: 1px solid #d6e8f8;
+  background-color: #eaf3ff;
+  color: #1a3c6e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ride-card-body {
+  padding: 14px 16px 16px;
+}
+
+.ride-card-route {
+  margin-bottom: 10px;
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ride-card-route .arrow {
+  margin: 0 2px;
+  color: #4a90d9;
+}
+
+.ride-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ride-card-meta p {
+  color: #5a7fa8;
+  font-size: 12px;
+}
+
+/* ── Driver Rating ── */
+.driver-rating-summary {
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+/* ── Ride Price ── */
+.ride-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.price-label {
+  color: #8aaac8;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.price-value {
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* ── Ride Action Buttons ── */
+.ride-action-btn {
+  width: 100%;
+}
+
+.view-driver-btn {
+  margin-top: 8px;
+}
+
+.view-ride-btn {
+  margin-top: 10px;
+}
+
+/* ── No Results ── */
+.no-results {
+  grid-column: 1 / -1;
+  padding: 60px 20px;
+  color: #5a7fa8;
+  text-align: center;
+}
+
+.no-results p {
+  font-size: 15px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .rides-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .advanced-search {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 8px;
+  }
+
+  .search-field {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e8f1fb;
+  }
+
+  .search-field:last-of-type {
+    border-bottom: none;
+  }
+
+  .search-divider {
+    display: none;
+  }
+
+  .search-main-btn {
+    width: 100%;
+    margin: 8px 0 0;
+    padding: 13px;
+    border-radius: 8px;
+  }
+
+  .advanced-search-wrapper {
+    margin-top: -40px;
+    padding: 0 16px;
+  }
+
+  .home-hero {
+    padding-bottom: 72px;
+  }
+}
+
+@media (max-width: 600px) {
+  .rides-grid {
+    grid-template-columns: 1fr;
+    padding: 0 16px 32px;
+  }
+
+  .home-header {
+    padding: 12px 16px;
+  }
+
+  .section-header {
+    padding: 0 16px 12px;
+  }
+}

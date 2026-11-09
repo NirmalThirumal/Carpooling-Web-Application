@@ -1,0 +1,658 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.bookride-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ── Navbar ── */
+.bookride-header {
+  background-color: #1a3c6e;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.bookride-header h1 {
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.back-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* ── Body ── */
+.bookride-body {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+.bookride-body h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a3c6e;
+  margin-bottom: 24px;
+}
+
+/* ── Form ── */
+.bookride-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-card,
+.payment-card {
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.form-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a3c6e;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8f1fb;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.form-group:last-child { margin-bottom: 0; }
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a6090;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="tel"],
+.form-group input[type="number"],
+.form-group select {
+  width: 100%;
+  padding: 11px 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  background: #f4f9ff;
+  border: 1.5px solid #d6e8f8;
+  border-radius: 8px;
+  color: #1a3c6e;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+  background: white;
+}
+
+.form-group input::placeholder { color: #9ab4cc; }
+
+/* ── Payment Card ── */
+.payment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.payment-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a3c6e;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8f1fb;
+}
+
+.payment-amount {
+  background: #eaf3ff;
+  border: 1.5px solid #b8d4f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-amount span:first-child {
+  font-size: 13px;
+  color: #3a6090;
+}
+
+.payment-amount span:last-child {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a3c6e;
+}
+
+.payment-upi-label {
+  font-size: 13px;
+  color: #5a7fa8;
+}
+
+.payment-upi-id {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a3c6e;
+  background: #f4f9ff;
+  border: 1.5px solid #d6e8f8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  letter-spacing: 0.3px;
+}
+
+.payment-qr {
+  display: flex;
+  justify-content: center;
+}
+
+.payment-qr img {
+  width: 180px;
+  height: 180px;
+  border-radius: 10px;
+  border: 1px solid #d6e8f8;
+  padding: 8px;
+  background: white;
+}
+
+.payment-note {
+  font-size: 12px;
+  color: #9ab4cc;
+  text-align: center;
+}
+
+/* ── Submit ── */
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  background-color: #1a3c6e;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.submit-btn:hover {
+  background-color: #163260;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(26,60,110,0.3);
+}
+
+.submit-btn:disabled {
+  background-color: #9ab4cc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .bookride-body { padding: 20px 14px 48px; }
+  .form-card { padding: 18px; }
+}
+
+/* Booking options and status */
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #1a3c6e;
+}
+
+.cash-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #e67e22;
+}
+
+.loading-text {
+  padding: 20px;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Ride summary */
+.booking-ride-summary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 22px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.booking-ride-summary img {
+  width: 125px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.booking-ride-summary h3 {
+  color: #1a3c6e;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.booking-ride-summary p {
+  color: #5a7fa8;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.booking-ride-summary strong {
+  display: block;
+  color: #1a3c6e;
+  font-size: 13px;
+  margin-top: 7px;
+}
+
+/* Error */
+.booking-error {
+  padding: 12px 15px;
+  background: #fff0f0;
+  border: 1px solid #f3c4c4;
+  border-radius: 8px;
+  color: #b42318;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+/* Payment notes */
+.online-note {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff8e8;
+  border-left: 3px solid #e5a62b;
+  color: #95630b;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: 4px;
+}
+
+/* Fare summary */
+.booking-fare-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fare-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #5a7fa8;
+  font-size: 13px;
+}
+
+.fare-total {
+  padding-top: 13px;
+  border-top: 1px solid #d6e8f8;
+  color: #1a3c6e;
+  font-size: 16px;
+}
+
+/* Booking success */
+.booking-success-card {
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 14px;
+  padding: 30px 24px;
+  box-shadow: 0 4px 18px rgba(26, 60, 110, 0.08);
+  text-align: center;
+}
+
+.booking-success-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.booking-success-card h2 {
+  color: #1a3c6e;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.booking-success-card > p {
+  color: #5a7fa8;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 22px;
+}
+
+.booking-summary {
+  background: #f4f9ff;
+  border: 1px solid #d6e8f8;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: left;
+  margin-bottom: 22px;
+}
+
+.booking-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e3edf8;
+}
+
+.booking-summary > div:last-child {
+  border-bottom: none;
+}
+
+.booking-summary span {
+  color: #7897b7;
+  font-size: 11px;
+}
+
+.booking-summary strong {
+  color: #1a3c6e;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.booking-summary .pending-text {
+  color: #a56b00;
+}
+
+@media (max-width: 500px) {
+  .booking-ride-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .booking-ride-summary img {
+    width: 100%;
+    height: 170px;
+  }
+
+  .booking-success-card {
+    padding: 24px 16px;
+  }
+}
+
+/* =====================================================
+   DEMO ONLINE PAYMENT MODAL
+   Professional dark blue / light blue theme
+===================================================== */
+
+/* Background overlay */
+.mock-payment-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: rgba(10, 29, 56, 0.72);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  animation: paymentFadeIn 0.25s ease;
+}
+
+/* Main payment window */
+.mock-payment-card {
+  width: 100%;
+  max-width: 490px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #dce8f5;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 24px 70px rgba(0, 20, 50, 0.28);
+  animation: paymentSlideUp 0.3s ease;
+}
+
+/* Top decorative border */
+.mock-payment-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  border-radius: 20px 20px 0 0;
+  background: linear-gradient(90deg, #1a3c6e, #4a90d9, #83c5f5);
+}
+
+/* Payment heading */
+.mock-payment-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #173b6c;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+/* Amount description */
+.mock-payment-card > p:first-of-type {
+  color: #637d9b;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+/* Amount value */
+.mock-payment-card > p:first-of-type strong {
+  display: block;
+  color: #173b6c;
+  font-size: 30px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+/* Demo warning note */
+.mock-payment-card .online-note {
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  background: #fff8e9;
+  border: 1px solid #f3dfb2;
+  border-left: 4px solid #e6a32c;
+  border-radius: 10px;
+  color: #805b16;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* Payment result selection group */
+.mock-payment-card .form-group {
+  margin-bottom: 24px;
+  gap: 9px;
+}
+
+/* Payment selection label */
+.mock-payment-card .form-group label {
+  color: #244c7c;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+/* Payment result dropdown */
+.mock-payment-card .form-group select {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 15px;
+  background-color: #f3f8ff;
+  border: 1.5px solid #cbdced;
+  border-radius: 10px;
+  color: #173b6c;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.mock-payment-card .form-group select:hover {
+  border-color: #78a9df;
+}
+
+.mock-payment-card .form-group select:focus {
+  background-color: #ffffff;
+  border-color: #377fc4;
+  box-shadow: 0 0 0 4px rgba(55, 127, 196, 0.12);
+}
+
+/* Pay Now button */
+.mock-payment-card .submit-btn {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #1a3c6e, #285b98);
+  color: #ffffff;
+  border: none;
+  border-radius: 11px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(26, 60, 110, 0.2);
+  transition: all 0.25s ease;
+}
+
+.mock-payment-card .submit-btn:hover {
+  background: linear-gradient(135deg, #142f59, #1d4d83);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(26, 60, 110, 0.3);
+}
+
+.mock-payment-card .submit-btn:active {
+  transform: translateY(0);
+}
+
+.mock-payment-card .submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Pay Later button */
+.mock-payment-card .back-btn {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 11px 18px;
+  background: #f1f6fc;
+  color: #31577f;
+  border: 1px solid #d5e3f1;
+  border-radius: 10px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mock-payment-card .back-btn:hover {
+  background: #e4effb;
+  border-color: #a9c7e5;
+  color: #173b6c;
+}
+
+.mock-payment-card .back-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Error message inside payment modal */
+.mock-payment-card ~ .booking-error {
+  margin-top: 12px;
+}
+
+/* Animations */
+@keyframes paymentFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes paymentSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile responsive payment modal */
+@media (max-width: 600px) {
+  .mock-payment-overlay {
+    padding: 14px;
+  }
+
+  .mock-payment-card {
+    max-width: 100%;
+    padding: 27px 20px 22px;
+    border-radius: 16px;
+  }
+
+  .mock-payment-card h2 {
+    font-size: 20px;
+  }
+
+  .mock-payment-card > p:first-of-type strong {
+    font-size: 27px;
+  }
+
+  .mock-payment-card .submit-btn {
+    min-height: 50px;
+  }
+}

@@ -1,0 +1,334 @@
+
+/* ==========================================
+   NOTIFICATION BELL
+========================================== */
+
+.notification-wrapper {
+  position: relative;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+}
+
+.notification-bell {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-bell:hover,
+.notification-bell.active {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.notification-bell-icon {
+  font-size: 19px;
+}
+
+.notification-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border: 2px solid #1a3c6e;
+  border-radius: 20px;
+  background: #e5484d;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ==========================================
+   DROPDOWN BACKDROP
+========================================== */
+
+.notification-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  background: transparent;
+}
+
+/* ==========================================
+   NOTIFICATION DROPDOWN
+========================================== */
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 0;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  width: 390px;
+  max-width: calc(100vw - 24px);
+  max-height: 540px;
+  overflow: hidden;
+  border: 1px solid #d6e8f8;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 12px 40px rgba(12, 37, 70, 0.22);
+  animation: notificationDrop 0.2s ease;
+}
+
+@keyframes notificationDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================
+   HEADER
+========================================== */
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 17px 18px;
+  border-bottom: 1px solid #e1edf9;
+  background: #f3f8ff;
+}
+
+.notification-header h3 {
+  margin-bottom: 3px;
+  color: #1a3c6e;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.notification-header p {
+  color: #7897b7;
+  font-size: 11px;
+}
+
+.notification-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6685a5;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.notification-close:hover {
+  background: #e4effb;
+  color: #1a3c6e;
+}
+
+/* ==========================================
+   MARK ALL AS READ
+========================================== */
+
+.mark-all-read {
+  align-self: flex-end;
+  margin: 10px 16px 6px;
+  padding: 6px 9px;
+  border: none;
+  background: transparent;
+  color: #347bc0;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mark-all-read:hover {
+  color: #1a3c6e;
+  text-decoration: underline;
+}
+
+.mark-all-read:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   NOTIFICATION LIST
+========================================== */
+
+.notification-list {
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+}
+
+.notification-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.notification-list::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: #c7d9ed;
+}
+
+/* ==========================================
+   INDIVIDUAL NOTIFICATION
+========================================== */
+
+.notification-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 16px;
+  border: none;
+  border-bottom: 1px solid #edf3fa;
+  background: white;
+  font-family: "Poppins", sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.notification-item:hover {
+  background: #f3f8ff;
+}
+
+.notification-item.unread {
+  background: #eef6ff;
+}
+
+.notification-item.unread:hover {
+  background: #e4f0ff;
+}
+
+.notification-item-icon {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #e1efff;
+  font-size: 17px;
+}
+
+.notification-item-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notification-item-title {
+  color: #1a3c6e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notification-item-message {
+  overflow-wrap: anywhere;
+  color: #5a7595;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.notification-item-date {
+  margin-top: 3px;
+  color: #94abc2;
+  font-size: 10px;
+}
+
+.notification-unread-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #347bc0;
+}
+
+/* ==========================================
+   EMPTY STATE
+========================================== */
+
+.notification-empty {
+  padding: 35px 15px;
+  color: #7897b7;
+  font-size: 12px;
+  text-align: center;
+}
+
+.notification-empty > span {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 30px;
+}
+
+.notification-empty h4 {
+  margin-bottom: 5px;
+  color: #1a3c6e;
+  font-size: 13px;
+}
+
+.notification-empty p {
+  font-size: 11px;
+}
+
+/* ==========================================
+   ERROR MESSAGE
+========================================== */
+
+.notification-error {
+  margin: 8px 12px;
+  padding: 9px 14px;
+  border: 1px solid #f3c4c4;
+  border-radius: 7px;
+  background: #fff0f0;
+  color: #b42318;
+  font-size: 11px;
+}
+
+/* ==========================================
+   FOOTER
+========================================== */
+
+.notification-footer {
+  padding: 11px 15px;
+  border-top: 1px solid #e5eef8;
+  background: #f7faff;
+  color: #91a8c1;
+  font-size: 10px;
+  text-align: center;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+========================================== */
+
+@media (max-width: 600px) {
+  .notification-dropdown {
+    position: fixed;
+    top: 72px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-width: 420px;
+    max-height: calc(100vh - 90px);
+  }
+}

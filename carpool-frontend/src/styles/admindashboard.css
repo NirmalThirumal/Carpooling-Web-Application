@@ -1,0 +1,259 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+/* Global reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Page */
+.admin-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Navbar */
+.admin-header {
+  background-color: #1a3c6e;
+  padding: 14px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.admin-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Error message */
+.admin-error-message {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 20px 24px 0;
+}
+
+/* Body */
+.admin-body {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+/* Statistics grid */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 1000px;
+  margin: 28px auto 0;
+  padding: 0 24px;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.stat-card h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a9abf;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.stat-card p {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a3c6e;
+}
+
+/* Navigation buttons */
+.admin-nav {
+  display: flex;
+  gap: 10px;
+  max-width: 1000px;
+  margin: 24px auto 0;
+  padding: 0 24px;
+  flex-wrap: wrap;
+}
+
+.admin-nav-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1.5px solid #d6e8f8;
+  background: white;
+  color: #1a3c6e;
+  transition: all 0.15s ease;
+}
+
+.admin-nav-btn:hover {
+  background: #eaf3ff;
+  border-color: #4a90d9;
+  color: #2d6ab4;
+}
+
+.admin-nav-btn.active {
+  background: #1a3c6e;
+  color: white;
+  border-color: #1a3c6e;
+}
+
+/* Data section */
+.admin-section {
+  max-width: 1000px;
+  margin: 24px auto 0;
+  padding: 0 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a3c6e;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8f1fb;
+  margin-bottom: 4px;
+}
+
+/* Admin cards */
+.admin-card {
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 6px rgba(26, 60, 110, 0.05);
+}
+
+.admin-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.admin-card-meta p {
+  font-size: 13px;
+  color: #3a6090;
+  line-height: 1.5;
+}
+
+.admin-card-meta p b {
+  color: #1a3c6e;
+}
+
+/* Card actions */
+.admin-card-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.admin-btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.admin-btn.edit {
+  background: #eaf3ff;
+  color: #2d6ab4;
+  border: 1px solid #b8d4f0;
+}
+
+.admin-btn.edit:hover {
+  background: #d6e8f8;
+}
+
+.admin-btn.delete {
+  background: rgba(208, 69, 58, 0.08);
+  color: #c0392b;
+  border: 1px solid rgba(208, 69, 58, 0.25);
+}
+
+.admin-btn.delete:hover {
+  background: rgba(208, 69, 58, 0.15);
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+  margin-left: 4px;
+}
+
+.status-badge.pending {
+  background: #fff4e0;
+  color: #b07800;
+}
+
+.status-badge.accepted {
+  background: #e0f4ea;
+  color: #1a7a40;
+}
+
+.status-badge.rejected {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+/* Loading */
+.admin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 15px;
+  color: #7a9abf;
+  font-family: "Poppins", sans-serif;
+  background-color: #f0f6ff;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-stats,
+  .admin-nav,
+  .admin-section {
+    padding: 0 14px;
+  }
+
+  .admin-header {
+    padding: 12px 16px;
+  }
+
+  .admin-error-message {
+    margin-right: 14px;
+    margin-left: 14px;
+  }
+}

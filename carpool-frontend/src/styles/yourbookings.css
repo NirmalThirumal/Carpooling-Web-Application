@@ -1,0 +1,397 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* Global Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main Container */
+.yourbookings-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header */
+.yourbookings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background-color: #1a3c6e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.yourbookings-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Header Buttons */
+.home-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-btn.primary {
+  background-color: #4a90d9;
+  color: white;
+}
+
+.home-btn.primary:hover {
+  background-color: #357abd;
+}
+
+.home-btn.ghost {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #a8c4e8;
+}
+
+.home-btn.ghost:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 28px 14px;
+}
+
+.section-header h3 {
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.booking-count {
+  padding: 3px 11px;
+  background: #ddeeff;
+  border-radius: 20px;
+  color: #2d6ab4;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Bookings Grid */
+.rides-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 0 28px 40px;
+}
+
+/* Booking Card */
+.ride-card {
+  overflow: hidden;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.07);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.ride-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(26, 60, 110, 0.13);
+}
+
+.ride-card img {
+  display: block;
+  width: 100%;
+  height: 165px;
+  object-fit: cover;
+  border-bottom: 1px solid #e8f1fb;
+}
+
+.ride-car-name {
+  padding: 6px 14px;
+  background-color: #eaf3ff;
+  border-bottom: 1px solid #d6e8f8;
+  color: #1a3c6e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ride-card-body {
+  padding: 14px 16px 16px;
+}
+
+/* Route and Ride Information */
+.ride-card-route {
+  margin-bottom: 10px;
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ride-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ride-card-meta p {
+  color: #5a7fa8;
+  font-size: 12px;
+}
+
+/* Passenger List */
+.passenger-list {
+  margin: 8px 0;
+}
+
+.passenger-list p {
+  margin-bottom: 4px;
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.passenger-list span {
+  display: block;
+  padding-left: 8px;
+  color: #5a7fa8;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+/* Booking Details */
+.booking-details {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.booking-details h4 {
+  margin-bottom: 9px;
+  color: #1a3c6e;
+  font-size: 13px;
+}
+
+/* Booking Price */
+.ride-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.price-label {
+  color: #8aaac8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.price-value {
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Booking Status */
+.booking-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.booking-status span:first-child {
+  color: #3a6090;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #fff4e0;
+  color: #b07800;
+}
+
+.status-badge.accepted {
+  background: #e0f4ea;
+  color: #1a7a40;
+}
+
+.status-badge.rejected {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.status-badge.cancelled {
+  background: #edf0f4;
+  color: #64748b;
+}
+
+.status-badge.completed {
+  background: #e2efff;
+  color: #2865a8;
+}
+
+/* Payment Status */
+.booking-payment-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.booking-payment-status > span:first-child {
+  color: #3a6090;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Cancellation and Refund Information */
+.booking-error {
+  color: #b42318;
+}
+
+/* Chat Button and Unread Badge */
+.chat-btn-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-top: 12px;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  background: #e74c3c;
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Booking Actions */
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.review-btn {
+  background: #eaf3ff;
+  border: 1px solid #d6e8f8;
+  color: #1a3c6e;
+}
+
+.review-btn:hover {
+  background: #d6e8f8;
+}
+
+/* Cancel Booking Button */
+.cancel-booking-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: #fff0f0;
+  border: 1px solid #f3c4c4;
+  color: #c0392b;
+}
+
+.cancel-booking-btn:hover {
+  background: #fde0e0;
+}
+
+.cancel-booking-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Empty and No Results States */
+.no-results {
+  grid-column: 1 / -1;
+  padding: 60px 20px;
+  color: #5a7fa8;
+  text-align: center;
+}
+
+.no-results p {
+  font-size: 15px;
+}
+
+.no-results h3 {
+  margin-bottom: 8px;
+  color: #1a3c6e;
+  font-size: 18px;
+}
+
+.no-results .home-btn {
+  margin-top: 12px;
+}
+
+.empty-bookings-icon {
+  margin-bottom: 12px;
+  font-size: 42px;
+}
+
+/* Responsive Layout */
+@media (max-width: 960px) {
+  .rides-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .rides-grid {
+    grid-template-columns: 1fr;
+    padding: 0 16px 32px;
+  }
+
+  .yourbookings-header {
+    padding: 12px 16px;
+  }
+
+  .section-header {
+    padding: 18px 16px 12px;
+  }
+
+  .booking-actions {
+    flex-direction: column;
+  }
+
+  .booking-actions button {
+    width: 100%;
+  }
+
+  .booking-payment-status {
+    gap: 8px;
+  }
+}

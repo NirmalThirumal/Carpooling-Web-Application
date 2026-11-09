@@ -1,0 +1,329 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* Global Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main Container */
+.rideview-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header */
+.rideview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background-color: #1a3c6e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.rideview-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.back-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Loading State */
+.rideview-loading {
+  padding: 40px 28px;
+  color: #7a9abf;
+  font-size: 14px;
+}
+
+/* Main Content Layout */
+.rideview-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+/* Left Column */
+.rideview-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Car Image */
+.rideview-car-img {
+  display: block;
+  width: 100%;
+  height: 340px;
+  object-fit: cover;
+  border: 1px solid #d6e8f8;
+  border-radius: 14px;
+}
+
+/* Car Name */
+.rideview-car-name {
+  color: #1a3c6e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Ride Information Card */
+.rideview-info-card {
+  padding: 20px;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.rideview-route {
+  margin-bottom: 14px;
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.rideview-route .arrow {
+  margin: 0 6px;
+  color: #4a90d9;
+}
+
+.rideview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rideview-meta p {
+  color: #5a7fa8;
+  font-size: 13px;
+}
+
+/* Reviews Section */
+.rideview-reviews-card {
+  padding: 20px;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.rideview-reviews-card h3 {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8f1fb;
+  color: #1a3c6e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.reviews-empty {
+  color: #9ab4cc;
+  font-size: 13px;
+}
+
+.review-card {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  background: #f4f9ff;
+  border: 1px solid #e8f1fb;
+  border-radius: 8px;
+}
+
+.review-card:last-child {
+  margin-bottom: 0;
+}
+
+.review-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.review-passenger {
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.review-stars {
+  color: #f5a623;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.review-text {
+  color: #5a7fa8;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Right Column */
+.rideview-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Driver Card */
+.driver-card {
+  padding: 18px 20px;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+  cursor: pointer;
+  transition:
+    box-shadow 0.18s,
+    transform 0.18s,
+    border-color 0.18s;
+}
+
+.driver-card:hover {
+  border-color: #4a90d9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26, 60, 110, 0.12);
+}
+
+.driver-card h3 {
+  margin-bottom: 10px;
+  color: #7a9abf;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.driver-name {
+  margin-bottom: 6px;
+  color: #1a3c6e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.driver-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px;
+  background: #eaf3ff;
+  border: 1px solid #b8d4f0;
+  border-radius: 20px;
+  color: #2d6ab4;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.driver-card-hint {
+  margin-top: 8px;
+  color: #9ab4cc;
+  font-size: 11px;
+}
+
+/* Price Breakdown Card */
+.price-card {
+  padding: 18px 20px;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.price-card h3 {
+  margin-bottom: 12px;
+  color: #7a9abf;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: #5a7fa8;
+  font-size: 13px;
+}
+
+.price-row.total {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #e8f1fb;
+  color: #1a3c6e;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Book Ride Button */
+.book-btn {
+  width: 100%;
+  padding: 14px;
+  background-color: #1a3c6e;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.book-btn:hover {
+  background-color: #163260;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(26, 60, 110, 0.3);
+}
+
+/* Disabled Book Button */
+.book-btn.disabled-btn {
+  background-color: #9ab4cc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.book-btn.disabled-btn:hover {
+  background-color: #9ab4cc;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+  .rideview-body {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .rideview-car-img {
+    height: 220px;
+  }
+}

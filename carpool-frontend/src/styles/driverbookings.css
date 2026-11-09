@@ -1,0 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ========================================
+   GLOBAL RESET
+======================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ========================================
+   MAIN CONTAINER
+======================================== */
+
+.driverbookings-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ========================================
+   HEADER
+======================================== */
+
+.driverbookings-header {
+  background-color: #1a3c6e;
+  padding: 14px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.driverbookings-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ========================================
+   BUTTONS
+======================================== */
+
+.home-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.home-btn.primary {
+  background-color: #4a90d9;
+  color: white;
+}
+
+.home-btn.primary:hover {
+  background-color: #357abd;
+}
+
+.home-btn.ghost {
+  background-color: transparent;
+  color: #a8c4e8;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.home-btn.ghost:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* ========================================
+   SECTION HEADER
+======================================== */
+
+.section-header {
+  padding: 24px 28px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-header h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a3c6e;
+}
+
+/* ========================================
+   BOOKING LIST
+======================================== */
+
+.driverbookings-list {
+  max-width: 760px;
+  padding: 0 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ========================================
+   BOOKING CARD
+======================================== */
+
+.booking-card {
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.06);
+}
+
+.booking-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a3c6e;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8f1fb;
+}
+
+/* ========================================
+   PASSENGER DETAILS
+======================================== */
+
+.booking-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.booking-card-meta p {
+  font-size: 13px;
+  color: #3a6090;
+  line-height: 1.5;
+}
+
+.booking-card-meta p b {
+  color: #1a3c6e;
+}
+
+.passenger-list {
+  margin: 4px 0 8px 10px;
+}
+
+.passenger-list p {
+  font-size: 12px;
+  color: #5a7fa8;
+  line-height: 1.8;
+}
+
+/* ========================================
+   BOOKING STATUS
+======================================== */
+
+.status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 12px;
+  border-radius: 20px;
+  margin-left: 6px;
+}
+
+.status-badge.pending {
+  background: #fff4e0;
+  color: #b07800;
+}
+
+.status-badge.accepted {
+  background: #e0f4ea;
+  color: #1a7a40;
+}
+
+.status-badge.rejected {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+/* ========================================
+   BOOKING ACTIONS
+======================================== */
+
+.booking-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.booking-actions .home-btn {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 13px;
+  border: none;
+}
+
+.booking-actions .home-btn.reject {
+  background: rgba(208, 69, 58, 0.08);
+  color: #c0392b;
+  border: 1px solid rgba(208, 69, 58, 0.25);
+}
+
+.booking-actions .home-btn.reject:hover {
+  background: rgba(208, 69, 58, 0.15);
+}
+
+/* ========================================
+   ERROR MESSAGE
+======================================== */
+
+.driverbookings-action-error {
+  margin: 15px 0;
+  padding: 12px;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+}
+
+/* ========================================
+   EMPTY STATE
+======================================== */
+
+.driverbookings-empty {
+  padding: 60px 28px;
+  text-align: center;
+  color: #7a9abf;
+  font-size: 15px;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+======================================== */
+
+@media (max-width: 600px) {
+  .driverbookings-list {
+    padding: 0 16px 40px;
+  }
+
+  .driverbookings-header {
+    padding: 12px 16px;
+  }
+}

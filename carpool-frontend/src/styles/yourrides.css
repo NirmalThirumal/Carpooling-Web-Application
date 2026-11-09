@@ -1,0 +1,391 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* Global Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main Container */
+.yourrides-container {
+  min-height: 100vh;
+  background-color: #f0f6ff;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header */
+.yourrides-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background-color: #1a3c6e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.yourrides-header h1 {
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Shared Button Styles */
+.home-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-btn.primary {
+  background-color: #4a90d9;
+  color: white;
+}
+
+.home-btn.primary:hover {
+  background-color: #357abd;
+}
+
+.home-btn.ghost {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #a8c4e8;
+}
+
+.home-btn.ghost:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.home-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 28px 14px;
+}
+
+.section-header h3 {
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.section-header .home-btn {
+  margin-left: auto;
+}
+
+/* Rides Grid */
+.rides-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 0 28px 40px;
+}
+
+/* Ride Card */
+.ride-card {
+  overflow: hidden;
+  background: white;
+  border: 1px solid #d6e8f8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(26, 60, 110, 0.07);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.ride-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(26, 60, 110, 0.13);
+}
+
+.ride-card img {
+  display: block;
+  width: 100%;
+  height: 165px;
+  object-fit: cover;
+  border-bottom: 1px solid #e8f1fb;
+}
+
+.ride-car-name {
+  padding: 6px 14px;
+  background-color: #eaf3ff;
+  border-bottom: 1px solid #d6e8f8;
+  color: #1a3c6e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ride-card-body {
+  padding: 14px 16px 16px;
+}
+
+/* Route and Ride Information */
+.ride-card-route {
+  margin-bottom: 10px;
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ride-route-arrow {
+  color: #4a90d9;
+}
+
+.ride-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ride-card-meta p {
+  color: #5a7fa8;
+  font-size: 12px;
+}
+
+/* Ride Price */
+.ride-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.price-label {
+  color: #8aaac8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.price-value {
+  color: #1a3c6e;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Booking Requests Section */
+.bookings-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e8f1fb;
+}
+
+.bookings-section h4 {
+  margin-bottom: 8px;
+  color: #1a3c6e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bookings-empty {
+  color: #7a9abf;
+  font-size: 12px;
+}
+
+/* Individual Booking Request */
+.booking-item {
+  margin-top: 10px;
+  padding: 12px;
+  background: #f4f9ff;
+  border: 1px solid #e8f1fb;
+  border-radius: 8px;
+}
+
+.booking-item p {
+  margin-bottom: 4px;
+  color: #3a6090;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.booking-item p b {
+  color: #1a3c6e;
+}
+
+.booking-passenger-list {
+  margin: 4px 0 8px 8px;
+}
+
+.booking-passenger-list p {
+  color: #5a7fa8;
+  font-size: 12px;
+}
+
+/* Booking Actions */
+.booking-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.booking-actions .home-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  font-size: 12px;
+}
+
+.booking-actions .home-btn.ghost {
+  background: rgba(208, 69, 58, 0.06);
+  border: 1px solid rgba(208, 69, 58, 0.3);
+  color: #d0453a;
+}
+
+.booking-actions .home-btn.ghost:hover {
+  background: rgba(208, 69, 58, 0.12);
+  color: #b03028;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #fff4e0;
+  color: #b07800;
+}
+
+.status-badge.accepted {
+  background: #e0f4ea;
+  color: #1a7a40;
+}
+
+.status-badge.rejected {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.status-badge.cancelled {
+  background: #edf0f4;
+  color: #667085;
+}
+
+.status-badge.completed {
+  background: #e0f4ea;
+  color: #1a7a40;
+}
+
+.status-badge.fully_booked {
+  background: #eaf3ff;
+  color: #2d6ab4;
+}
+
+.status-badge.draft {
+  background: #f1f1f1;
+  color: #666;
+}
+
+/* Chat Button and Unread Badge */
+.chat-btn-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  background: #e74c3c;
+  border-radius: 50%;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Complete Ride Button */
+.complete-ride-button {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Cancel Ride Button */
+.cancel-ride-button {
+  width: 100%;
+  margin-top: 10px;
+  background: rgba(208, 69, 58, 0.06) !important;
+  border: 1px solid rgba(208, 69, 58, 0.3) !important;
+  color: #c0392b !important;
+}
+
+.cancel-ride-button:hover {
+  background: rgba(208, 69, 58, 0.12) !important;
+}
+
+/* Error Message */
+.yourrides-error {
+  max-width: 1000px;
+  margin: 10px 28px 20px;
+  padding: 12px 16px;
+  background: #fff0f0;
+  border: 1px solid #f3caca;
+  border-radius: 8px;
+  color: #b42318;
+  font-size: 12px;
+}
+
+/* No Results */
+.no-results {
+  grid-column: 1 / -1;
+  padding: 60px 20px;
+  color: #5a7fa8;
+  text-align: center;
+}
+
+.no-results p {
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+/* Responsive Layout */
+@media (max-width: 960px) {
+  .rides-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .rides-grid {
+    grid-template-columns: 1fr;
+    padding: 0 16px 32px;
+  }
+
+  .yourrides-header {
+    padding: 12px 16px;
+  }
+
+  .section-header {
+    padding: 18px 16px 12px;
+  }
+
+  .yourrides-error {
+    margin: 10px 16px;
+  }
+}
