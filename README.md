@@ -40,7 +40,7 @@ The platform provides user authentication, ride management, booking management, 
 | Route and Distance | GraphHopper API |
 | Image Storage | Cloudinary |
 | HTTP Requests | Axios, Fetch API |
-| Payment-related functionality | Cash and online payment options; verify gateway configuration before production use |
+| Payment-related Functionality | Cash and online payment options; verify gateway configuration before production use |
 | Version Control | Git and GitHub |
 
 ## Project Architecture
@@ -69,6 +69,16 @@ Carpooling-Web-Application/
 │   ├── routes/
 │   ├── package.json
 │   └── server.js
+│
+├── docs/
+│   └── screenshots/
+│       ├── homepage.png
+│       ├── login.png
+│       ├── signup.png
+│       ├── add-ride.png
+│       ├── ride-details.png
+│       ├── booking.png
+│       └── admin-dashboard.png
 │
 ├── .gitignore
 └── README.md
@@ -222,9 +232,49 @@ Open that URL in your browser.
 
 ## Application Screenshots
 
-Screenshots of the application's main interfaces will be added here.
+The following screenshots showcase the main interfaces and features of the Carpooling Web Application.
 
-<!-- Add screenshots in a repository folder such as docs/screenshots/ -->
+### 1. Homepage
+
+Displays available rides, search filters, vehicle information, routes, and fare details.
+
+![Homepage](docs/screenshots/homepage.png)
+
+### 2. Login Page
+
+Allows existing users to log in using email/password or Google authentication.
+
+![Login Page](docs/screenshots/login.png)
+
+### 3. Signup Page
+
+Allows new users to create an account using their name, email, and password or Google authentication.
+
+![Signup Page](docs/screenshots/signup.png)
+
+### 4. Add Ride
+
+Allows drivers to enter ride details, select pickup and destination locations, and view the route on an interactive map.
+
+![Add Ride](docs/screenshots/add-ride.png)
+
+### 5. Ride Details
+
+Displays vehicle information, driver details, available seats, journey distance, departure information, fare breakdown, and booking options.
+
+![Ride Details](docs/screenshots/ride-details.png)
+
+### 6. Booking Management
+
+Displays ride booking information and allows users to manage their booking-related activities.
+
+![Booking Management](docs/screenshots/booking.png)
+
+### 7. Admin Dashboard
+
+Provides an administrative interface to view platform statistics and manage rides, bookings, and users.
+
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
 
 ## Future Improvements
 
