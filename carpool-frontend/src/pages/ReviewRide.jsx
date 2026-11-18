@@ -1,18 +1,9 @@
-
 import { useState, useContext, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  getFirestore,
-  doc,
-  getDoc
-} from "firebase/firestore";
 
 import { AuthContext } from "../context/AuthContext";
-import app from "../firebase/config";
 import authenticatedFetch from "../services/authenticatedFetch";
 import "../styles/reviewride.css";
-
-const db = getFirestore(app);
 
 function ReviewRide() {
   const { bookingId } = useParams();
@@ -47,22 +38,31 @@ function ReviewRide() {
         setLoading(true);
         setError("");
 
-        // Load the booking.
-        const bookingRef = doc(db, "bookings", bookingId);
-        const bookingSnap = await getDoc(bookingRef);
+        // Fetch booking, associated ride, and review status from MongoDB.
+        const response = await authenticatedFetch(
+          `/api/bookings/${bookingId}`
+        );
 
-        if (!bookingSnap.exists()) {
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || data.message || "Unable to load booking."
+          );
+        }
+
+        const bookingData = data.booking;
+        const rideData = data.ride;
+
+        if (!bookingData) {
           throw new Error("Booking not found.");
         }
 
-        const bookingData = {
-          id: bookingSnap.id,
-          ...bookingSnap.data()
-        };
-
         // Only the passenger who made this booking can review it.
         if (bookingData.userId !== user.uid) {
-          throw new Error("You are not authorized to review this booking.");
+          throw new Error(
+            "You are not authorized to review this booking."
+          );
         }
 
         // The booking must be completed.
@@ -72,29 +72,17 @@ function ReviewRide() {
           );
         }
 
-        // Confirm that the associated ride is also completed.
-        if (!bookingData.rideId) {
+        // Confirm that the associated ride exists.
+        if (!rideData) {
           throw new Error("The associated ride could not be found.");
         }
 
-        const rideRef = doc(db, "rides", bookingData.rideId);
-        const rideSnap = await getDoc(rideRef);
-
-        if (!rideSnap.exists()) {
-          throw new Error("The associated ride could not be found.");
-        }
-
-        const rideData = rideSnap.data();
-
+        // The associated ride must also be completed.
         if (rideData.status !== "completed") {
           throw new Error(
             "This ride has not been marked as completed yet."
           );
         }
-
-        // Reviews are stored with bookingId as the review document ID.
-        const reviewRef = doc(db, "reviews", bookingId);
-        const reviewSnap = await getDoc(reviewRef);
 
         if (!active) return;
 
@@ -103,9 +91,8 @@ function ReviewRide() {
           ride: rideData
         });
 
-        if (reviewSnap.exists()) {
-          setAlreadyReviewed(true);
-        }
+        setAlreadyReviewed(Boolean(data.alreadyReviewed));
+
       } catch (err) {
         console.error("Error loading review information:", err);
 

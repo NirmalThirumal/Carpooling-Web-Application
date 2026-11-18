@@ -1,30 +1,24 @@
 import axios from "axios";
 
-// ========================================
-// Cloudinary Configuration
-// ========================================
-
-const CLOUDINARY_CLOUD_NAME = "drpuweldw";
-const CLOUDINARY_UPLOAD_PRESET = "carpool_upload";
-
-// ========================================
-// Image Upload
-// ========================================
+const CLOUDINARY_CLOUD_NAME =
+  import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET =
+  import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 export const uploadImageToCloudinary = async (file) => {
-  // Validate selected file.
   if (!file) {
     throw new Error("Please select an image to upload.");
   }
 
-  // Validate image file type.
   if (!file.type.startsWith("image/")) {
     throw new Error("Only image files are allowed.");
   }
 
-  // Prepare upload form data.
-  const formData = new FormData();
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    throw new Error("Cloudinary upload configuration is missing.");
+  }
 
+  const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
@@ -34,7 +28,6 @@ export const uploadImageToCloudinary = async (file) => {
       formData
     );
 
-    // Validate Cloudinary response.
     if (!response.data?.secure_url) {
       throw new Error("Cloudinary did not return an image URL.");
     }

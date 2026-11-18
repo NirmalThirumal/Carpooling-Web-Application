@@ -1,21 +1,11 @@
 
 import { useContext, useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  doc,
-  getFirestore,
-  onSnapshot,
-  query,
-  updateDoc,
-  where
-} from "firebase/firestore";
-
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
-import app from "../firebase/config";
-import "../styles/notification.css";
 
-const db = getFirestore(app);
+import { AuthContext } from "../context/AuthContext";
+import authenticatedFetch from "../services/authenticatedFetch";
+
+import "../styles/notification.css";
 
 function NotificationBell() {
   const { user } = useContext(AuthContext);
@@ -28,7 +18,7 @@ function NotificationBell() {
   const [error, setError] = useState("");
 
   // ==========================================
-  // REAL-TIME NOTIFICATION LISTENER
+  // FETCH NOTIFICATIONS FROM MONGODB
   // ==========================================
 
   useEffect(() => {
@@ -38,49 +28,65 @@ function NotificationBell() {
       return;
     }
 
-    setLoading(true);
-    setError("");
+    let isMounted = true;
 
-    const notificationsQuery = query(
-      collection(db, "notifications"),
-      where("recipientId", "==", user.uid)
-    );
+    const fetchNotifications = async (showLoading = false) => {
+      try {
+        if (showLoading && isMounted) {
+          setLoading(true);
+        }
 
-    const unsubscribe = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const notificationData = snapshot.docs.map(
-          (notificationDoc) => ({
-            id: notificationDoc.id,
-            ...notificationDoc.data()
-          })
+        const response = await authenticatedFetch(
+          "/api/notifications"
         );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || "Failed to fetch notifications."
+          );
+        }
+
+        if (!isMounted) return;
+
+        const notificationData = data.notifications || [];
 
         // Sort newest notifications first.
         notificationData.sort((a, b) => {
-          const dateA = a.createdAt?.toMillis
-            ? a.createdAt.toMillis()
-            : new Date(a.createdAt || 0).getTime();
-
-          const dateB = b.createdAt?.toMillis
-            ? b.createdAt.toMillis()
-            : new Date(b.createdAt || 0).getTime();
-
-          return dateB - dateA;
+          return (
+            new Date(b.createdAt || 0).getTime() -
+            new Date(a.createdAt || 0).getTime()
+          );
         });
 
         setNotifications(notificationData);
-        setLoading(false);
         setError("");
-      },
-      (err) => {
-        console.error("Notification listener error:", err);
-        setError("Unable to load notifications.");
-        setLoading(false);
-      }
-    );
+      } catch (err) {
+        console.error("Notification fetch error:", err);
 
-    return () => unsubscribe();
+        if (isMounted) {
+          setError("Unable to load notifications.");
+        }
+      } finally {
+        if (isMounted && showLoading) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchNotifications(true);
+
+    // Refresh notifications periodically because MongoDB
+    // does not provide Firestore-style real-time listeners.
+    const intervalId = setInterval(() => {
+      fetchNotifications(false);
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, [user?.uid]);
 
   // ==========================================
@@ -166,9 +172,7 @@ function NotificationBell() {
   const formatNotificationDate = (timestamp) => {
     if (!timestamp) return "";
 
-    const date = timestamp?.toDate
-      ? timestamp.toDate()
-      : new Date(timestamp);
+    const date = new Date(timestamp);
 
     if (Number.isNaN(date.getTime())) return "";
 
@@ -193,9 +197,28 @@ function NotificationBell() {
 
       if (!notification || notification.read === true) return;
 
-      await updateDoc(
-        doc(db, "notifications", notificationId),
-        { read: true }
+      const response = await authenticatedFetch(
+        `/api/notifications/${notificationId}/read`,
+        {
+          method: "PATCH"
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Unable to mark notification as read."
+        );
+      }
+
+      // Update the local notification state.
+      setNotifications((previous) =>
+        previous.map((item) =>
+          item.id === notificationId
+            ? { ...item, read: true }
+            : item
+        )
       );
     } catch (err) {
       console.error("Mark notification as read error:", err);
@@ -218,13 +241,27 @@ function NotificationBell() {
       setUpdating(true);
       setError("");
 
-      await Promise.all(
-        unreadNotifications.map((notification) =>
-          updateDoc(
-            doc(db, "notifications", notification.id),
-            { read: true }
-          )
-        )
+      const response = await authenticatedFetch(
+        "/api/notifications/read-all",
+        {
+          method: "PATCH"
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Unable to update notifications."
+        );
+      }
+
+      // Update all notifications locally.
+      setNotifications((previous) =>
+        previous.map((notification) => ({
+          ...notification,
+          read: true
+        }))
       );
     } catch (err) {
       console.error("Mark all notifications as read error:", err);

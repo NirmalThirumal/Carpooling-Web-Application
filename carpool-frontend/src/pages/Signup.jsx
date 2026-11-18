@@ -15,18 +15,6 @@ function Signup() {
     const user = await signupWithEmail(email, password, name);
 
     if (user) {
-      await fetch("http://localhost:5000/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName || name
-        })
-      });
-
       navigate("/home");
     }
   };

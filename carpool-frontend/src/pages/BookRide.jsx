@@ -1,13 +1,10 @@
 import { useState, useEffect, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 import { AuthContext } from "../context/AuthContext";
-import app from "../firebase/config";
 import authenticatedFetch from "../services/authenticatedFetch";
 import "../styles/bookride.css";
 
-const db = getFirestore(app);
 
 function BookRide() {
   const { rideId } = useParams();
@@ -40,20 +37,17 @@ function BookRide() {
         setLoading(true);
         setError("");
 
-        const rideRef = doc(db, "rides", rideId);
-        const rideSnap = await getDoc(rideRef);
+        // Retrieve the ride from MongoDB through the authenticated Express API.
+        const response = await authenticatedFetch(`/api/rides/${rideId}`);
+        const data = await response.json();
 
         if (!active) return;
 
-        if (!rideSnap.exists()) {
-          setError("Ride not found.");
-          return;
+        if (!response.ok || !data.success || !data.ride) {
+          throw new Error(data.error || "Ride not found.");
         }
 
-        const rideData = {
-          id: rideSnap.id,
-          ...rideSnap.data()
-        };
+        const rideData = data.ride;
 
         if (rideData.status !== "published") {
           setError("This ride is no longer available for booking.");
@@ -204,8 +198,8 @@ function BookRide() {
     }
   };
 
-  // This is a DEMO simulation only. The backend must verify the booking owner
-  // and write the payment result; the browser never updates Firestore directly.
+  // This is a DEMO simulation only. The backend verifies the booking owner
+  // and stores the payment result in MongoDB.
   const handleMockPayment = async () => {
     if (!bookingResult?.bookingId) {
       setError("Booking information is missing. Please try again.");

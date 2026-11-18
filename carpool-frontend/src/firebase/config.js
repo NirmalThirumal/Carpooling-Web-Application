@@ -1,21 +1,23 @@
 import { initializeApp } from "firebase/app";
 
-// ========================================
-// Firebase Configuration
-// ========================================
-
 const firebaseConfig = {
-  apiKey: "AIzaSyBYanzNnZwrsxPZeQ48LHeumnth3a-O06g",
-  authDomain: "carpool-app-e35ad.firebaseapp.com",
-  projectId: "carpool-app-e35ad",
-  storageBucket: "carpool-app-e35ad.firebasestorage.app",
-  messagingSenderId: "36562472909",
-  appId: "1:36562472909:web:cc3658a2e7ee7b7288be84",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// ========================================
-// Initialize Firebase
-// ========================================
+const requiredFirebaseSettings = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (requiredFirebaseSettings.length > 0) {
+  throw new Error(
+    `Missing Firebase frontend configuration: ${requiredFirebaseSettings.join(", ")}`
+  );
+}
 
 const app = initializeApp(firebaseConfig);
 

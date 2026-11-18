@@ -1,66 +1,74 @@
+
 const express = require("express");
 const router = express.Router();
 
-const admin = require("firebase-admin");
-const db = require("../config/firebase");
+const User = require("../models/User");
+const verifyToken = require("../middleware/verifyToken");
 
-// ========================================
-// User Signup
-// ========================================
-
-// Store user profile in Firestore.
-router.post("/signup", async (req, res) => {
+// Save or update user profile in MongoDB.
+router.post("/profile", verifyToken, async (req, res) => {
   try {
-    const { uid, email, name } = req.body;
+    const { name, photo, authProvider } = req.body;
 
-    await db.collection("users").doc(uid).set({
-      email,
-      name,
-      createdAt: new Date(),
+    const user = await User.findOneAndUpdate(
+      { uid: req.user.uid },
+      {
+        $set: {
+          name: name || req.user.name || "",
+          email: req.user.email,
+          photo: photo || "",
+          authProvider: authProvider || "password",
+        },
+      },
+      {
+        returnDocument: "after",
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    );
+
+    res.json({
+      success: true,
+      message: "User profile saved successfully",
+      user,
     });
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Save user profile error:", error);
 
     res.status(500).json({
-      error: "Signup failed",
+      success: false,
+      error: "Failed to save user profile",
     });
   }
 });
 
-// ========================================
-// User Login
-// ========================================
-
-// Verify that the user exists in Firestore.
-router.post("/login", async (req, res) => {
+// Get logged-in user's profile.
+router.get("/profile", verifyToken, async (req, res) => {
   try {
-    const { uid } = req.body;
+    const user = await User.findOne({
+      uid: req.user.uid,
+    });
 
-    const userDoc = await db.collection("users").doc(uid).get();
-
-    if (!userDoc.exists) {
+    if (!user) {
       return res.status(404).json({
-        error: "User not found",
+        success: false,
+        error: "User profile not found",
       });
     }
 
     res.json({
       success: true,
-      user: userDoc.data(),
+      user,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Get user profile error:", error);
 
     res.status(500).json({
-      error: "Login failed",
+      success: false,
+      error: "Failed to fetch user profile",
     });
   }
 });
-
-// ========================================
-// Export Router
-// ========================================
 
 module.exports = router;

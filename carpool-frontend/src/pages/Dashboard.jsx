@@ -1,23 +1,11 @@
 import { useCallback, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  getFirestore,
-  query,
-  where
-} from "firebase/firestore";
 
 import { AuthContext } from "../context/AuthContext";
 import { logout } from "../firebase/auth";
-import app from "../firebase/config";
 import authenticatedFetch from "../services/authenticatedFetch";
 
 import "../styles/dashboard.css";
-
-const db = getFirestore(app);
 
 function Dashboard() {
   const { user } = useContext(AuthContext);
@@ -29,7 +17,7 @@ function Dashboard() {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState("");
 
-  // Fetch driver bookings.
+  // Fetch driver bookings from MongoDB.
   const fetchBookings = useCallback(async () => {
     if (!user) {
       setBookings([]);
@@ -41,49 +29,48 @@ function Dashboard() {
       setLoading(true);
       setError("");
 
-      // Get bookings where the logged-in user is the driver.
-      const bookingsQuery = query(
-        collection(db, "bookings"),
-        where("driverId", "==", user.uid)
+      const response = await authenticatedFetch("/api/driver-bookings");
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || data.error || "Unable to load your bookings."
+        );
+      }
+
+      // Create a lookup for rides using their MongoDB IDs.
+      const ridesMap = new Map(
+        (data.rides || []).map((ride) => [
+          String(ride.id || ride._id),
+          ride
+        ])
       );
 
-      const snapshot = await getDocs(bookingsQuery);
+      // Attach the corresponding ride to each booking.
+      const results = (data.bookings || []).map((booking) => {
+        const ride = ridesMap.get(String(booking.rideId)) || null;
 
-      // Fetch the corresponding ride details.
-      const results = await Promise.all(
-        snapshot.docs.map(async (bookingDoc) => {
-          const booking = {
-            id: bookingDoc.id,
-            ...bookingDoc.data()
-          };
+        return {
+          ...booking,
+          id: booking.id || booking._id,
+          ride
+        };
+      });
 
-          let ride = null;
-
-          if (booking.rideId) {
-            const rideSnapshot = await getDoc(
-              doc(db, "rides", booking.rideId)
-            );
-
-            if (rideSnapshot.exists()) {
-              ride = rideSnapshot.data();
-            }
-          }
-
-          return { ...booking, ride };
-        })
-      );
-
+      // Sort bookings by newest first.
       results.sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.()?.getTime?.() || 0;
-        const dateB = b.createdAt?.toDate?.()?.getTime?.() || 0;
-
-        return dateB - dateA;
+        return (
+          new Date(b.createdAt).getTime() -
+          new Date(a.createdAt).getTime()
+        );
       });
 
       setBookings(results);
     } catch (err) {
       console.error("Error fetching driver bookings:", err);
-      setError("Unable to load your bookings. Please try again.");
+      setError(
+        err.message || "Unable to load your bookings. Please try again."
+      );
     } finally {
       setLoading(false);
     }

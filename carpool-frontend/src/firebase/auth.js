@@ -1,3 +1,4 @@
+
 import app from "./config";
 
 import {
@@ -11,54 +12,48 @@ import {
   updateProfile,
 } from "firebase/auth";
 
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-
-// ========================================
-// Firebase Initialization
-// ========================================
-
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
-const db = getFirestore(app);
 
-// ========================================
-// Firestore User Profile
-// ========================================
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
-// Create or synchronize the Firestore user profile.
+// Save or synchronize user profile in MongoDB.
 export const saveUserProfile = async (user, additionalName = "") => {
   if (!user) return;
 
-  const userRef = doc(db, "users", user.uid);
-  const userSnapshot = await getDoc(userRef);
+  const token = await user.getIdToken();
 
   const profileData = {
-    uid: user.uid,
     name: user.displayName || additionalName || "",
-    email: user.email || "",
     photo: user.photoURL || "",
-    authProvider: user.providerData?.[0]?.providerId || "password",
-    updatedAt: serverTimestamp(),
+    authProvider:
+      user.providerData?.[0]?.providerId || "password",
   };
 
-  // Set createdAt only when the profile is first created.
-  if (!userSnapshot.exists()) {
-    profileData.createdAt = serverTimestamp();
+  const response = await fetch(
+    `${API_BASE_URL}/api/auth/profile`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || "Unable to save user profile");
   }
 
-  await setDoc(userRef, profileData, { merge: true });
+  return data.user;
 };
 
-// ========================================
 // Google Authentication
-// ========================================
-
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, provider);
@@ -71,10 +66,6 @@ export const signInWithGoogle = async () => {
     throw error;
   }
 };
-
-// ========================================
-// Email Authentication
-// ========================================
 
 // Email Signup
 export const signupWithEmail = async (email, password, name) => {
@@ -116,10 +107,7 @@ export const loginWithEmail = async (email, password) => {
   }
 };
 
-// ========================================
 // Logout
-// ========================================
-
 export const logout = async () => {
   try {
     await signOut(auth);
@@ -129,16 +117,9 @@ export const logout = async () => {
   }
 };
 
-// ========================================
 // Authentication State Listener
-// ========================================
-
 export const listenToAuthChanges = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
-
-// ========================================
-// Default Export
-// ========================================
 
 export default auth;

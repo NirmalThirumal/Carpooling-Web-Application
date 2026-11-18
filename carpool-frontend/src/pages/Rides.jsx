@@ -1,20 +1,10 @@
-
 import { useEffect, useMemo, useState } from "react";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where
-} from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
-import app from "../firebase/config";
 import auth from "../firebase/auth";
+import authenticatedFetch from "../services/authenticatedFetch";
 import "../styles/rides.css";
-
-const db = getFirestore(app);
 
 const statusOptions = [
   { value: "all", label: "All Rides" },
@@ -37,7 +27,7 @@ function Rides() {
   // ==========================================
 
   useEffect(() => {
-    let unsubscribeAuth;
+    let active = true;
 
     const fetchRides = (user) => {
       if (!user) {
@@ -52,53 +42,54 @@ function Rides() {
           setLoading(true);
           setError("");
 
-          // Fetch only rides created by the logged-in user.
-          const ridesQuery = query(
-            collection(db, "rides"),
-            where("userId", "==", user.uid)
-          );
+          // Fetch rides belonging to the logged-in user from MongoDB.
+          const response = await authenticatedFetch("/api/my-rides");
 
-          const snapshot = await getDocs(ridesQuery);
+          const data = await response.json();
 
-          const rideData = snapshot.docs.map((document) => {
-            const data = document.data();
+          if (!response.ok || !data.success) {
+            throw new Error(
+              data.error || "Unable to load your rides."
+            );
+          }
 
-            return {
-              id: document.id,
-              ...data,
-              // Older rides without a status are treated as drafts.
-              status: data.status || "draft"
-            };
-          });
+          if (!active) return;
 
-          // Show newest rides first.
-          rideData.sort((a, b) => {
-            const dateA = a.createdAt?.toMillis?.() || 0;
-            const dateB = b.createdAt?.toMillis?.() || 0;
-
-            return dateB - dateA;
-          });
+          const rideData = (data.rides || []).map((ride) => ({
+            ...ride,
+            id: ride.id || ride._id,
+            status: ride.status || "draft",
+          }));
 
           setRides(rideData);
         } catch (err) {
           console.error("Error fetching rides:", err);
-          setError("Unable to load your rides. Please try again.");
+
+          if (active) {
+            setError(
+              "Unable to load your rides. Please try again."
+            );
+          }
         } finally {
-          setLoading(false);
+          if (active) {
+            setLoading(false);
+          }
         }
       };
 
       loadRides();
     };
 
-    unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       fetchRides(user);
     });
 
     return () => {
-      if (unsubscribeAuth) unsubscribeAuth();
+      active = false;
+      unsubscribeAuth();
     };
   }, []);
+
 
   // ==========================================
   // RIDE STATISTICS

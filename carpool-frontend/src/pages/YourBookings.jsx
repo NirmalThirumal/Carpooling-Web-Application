@@ -1,22 +1,9 @@
 
-import { useContext, useEffect, useState } from "react";
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-  getDoc,
-  doc,
-  onSnapshot
-} from "firebase/firestore";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import app from "../firebase/config";
 import authenticatedFetch from "../services/authenticatedFetch";
 import "../styles/yourbookings.css";
-
-const db = getFirestore(app);
 
 // ==========================================
 // DATE AND CANCELLATION HELPERS
@@ -112,9 +99,10 @@ function YourBookings() {
 
   // ==========================================
   // FETCH BOOKINGS AND ASSOCIATED RIDES
+  // FROM MONGODB
   // ==========================================
 
-  useEffect(() => {
+  const fetchBookings = useCallback(async (showLoading = true) => {
     if (!user) {
       setBookings([]);
       setRidesMap({});
@@ -123,115 +111,90 @@ function YourBookings() {
       return;
     }
 
-    let active = true;
-
-    const fetchBookings = async () => {
-      try {
+    try {
+      if (showLoading) {
         setLoading(true);
-        setError("");
-
-        // Fetch bookings belonging to the logged-in passenger.
-        const bookingsQuery = query(
-          collection(db, "bookings"),
-          where("userId", "==", user.uid)
-        );
-
-        const snapshot = await getDocs(bookingsQuery);
-
-        const bookingsData = snapshot.docs.map((document) => ({
-          id: document.id,
-          ...document.data()
-        }));
-
-        if (!active) return;
-
-        // Display newest bookings first.
-        bookingsData.sort((a, b) => {
-          const dateA = a.createdAt?.toMillis?.() || 0;
-          const dateB = b.createdAt?.toMillis?.() || 0;
-
-          return dateB - dateA;
-        });
-
-        setBookings(bookingsData);
-
-        // Check reviews for completed bookings.
-        const completedBookings = bookingsData.filter(
-          (booking) => booking.status === "completed"
-        );
-
-        const reviewEntries = await Promise.all(
-          completedBookings.map(async (booking) => {
-            try {
-              const reviewRef = doc(db, "reviews", booking.id);
-              const reviewSnap = await getDoc(reviewRef);
-
-              return [booking.id, reviewSnap.exists()];
-            } catch (reviewError) {
-              console.error(
-                `Unable to check review for booking ${booking.id}:`,
-                reviewError
-              );
-
-              return [booking.id, false];
-            }
-          })
-        );
-
-        if (active) {
-          setReviewedMap(Object.fromEntries(reviewEntries));
-        }
-
-        // Fetch associated ride documents.
-        const uniqueRideIds = [
-          ...new Set(
-            bookingsData
-              .map((booking) => booking.rideId)
-              .filter(Boolean)
-          )
-        ];
-
-        const rideEntries = await Promise.all(
-          uniqueRideIds.map(async (rideId) => {
-            const rideRef = doc(db, "rides", rideId);
-            const rideSnap = await getDoc(rideRef);
-
-            return [
-              rideId,
-              rideSnap.exists() ? rideSnap.data() : null
-            ];
-          })
-        );
-
-        if (active) {
-          setRidesMap(Object.fromEntries(rideEntries));
-        }
-      } catch (err) {
-        console.error("Your Bookings fetch error:", err);
-
-        if (active) {
-          setError(
-            err.code === "permission-denied"
-              ? "Permission denied. Please check your Firestore booking and ride read rules."
-              : err.message || "Unable to load your bookings."
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
       }
-    };
 
-    fetchBookings();
+      setError("");
 
-    return () => {
-      active = false;
-    };
+      // Fetch passenger bookings, associated rides,
+      // and reviewed booking IDs from MongoDB.
+      const response = await authenticatedFetch(
+        "/api/my-bookings",
+        {
+          method: "GET"
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.message ||
+          data.error ||
+          "Unable to load your bookings."
+        );
+      }
+
+      // Normalize MongoDB booking IDs.
+      const bookingsData = (data.bookings || []).map((booking) => ({
+        ...booking,
+        id: String(booking.id || booking._id),
+        rideId: String(booking.rideId)
+      }));
+
+      // Display newest bookings first.
+      bookingsData.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+
+        return dateB - dateA;
+      });
+
+      // Build a lookup of associated rides.
+      const ridesData = data.rides || [];
+
+      const ridesEntries = ridesData.map((ride) => [
+        String(ride.id || ride._id),
+        {
+          ...ride,
+          id: String(ride.id || ride._id)
+        }
+      ]);
+
+      // Build the reviewed-booking lookup.
+      const reviewedBookingIds = data.reviewedBookingIds || [];
+
+      const reviewedEntries = reviewedBookingIds.map((bookingId) => [
+        String(bookingId),
+        true
+      ]);
+
+      setBookings(bookingsData);
+      setRidesMap(Object.fromEntries(ridesEntries));
+      setReviewedMap(Object.fromEntries(reviewedEntries));
+    } catch (err) {
+      console.error("Your Bookings fetch error:", err);
+
+      setError(
+        err.message || "Unable to load your bookings."
+      );
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
   }, [user]);
 
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+
   // ==========================================
-  // REAL-TIME UNREAD CHAT MESSAGES
+  // FETCH UNREAD CHAT MESSAGE COUNTS
+  // FROM MONGODB
   // ==========================================
 
   useEffect(() => {
@@ -240,106 +203,42 @@ function YourBookings() {
       return;
     }
 
-    const unsubscribers = [];
     let active = true;
 
-    bookings.forEach((booking) => {
-      // Chat document ID is the same as booking ID.
-      const chatRef = doc(db, "chats", booking.id);
+    const fetchUnreadCounts = async () => {
+      try {
+        const response = await authenticatedFetch(
+          "/api/chats/unread-counts"
+        );
 
-      const unsubscribeChat = onSnapshot(
-        chatRef,
-        (chatSnapshot) => {
-          if (!active) return;
+        const data = await response.json();
 
-          // No chat exists yet.
-          if (!chatSnapshot.exists()) {
-            setUnreadMap((previous) => ({
-              ...previous,
-              [booking.id]: 0
-            }));
-
-            return;
-          }
-
-          const chat = chatSnapshot.data();
-
-          // Verify that the logged-in user belongs to this chat.
-          if (
-            chat.driverId !== booking.driverId ||
-            chat.passengerId !== user.uid
-          ) {
-            console.error(
-              "Chat participant information does not match booking:",
-              booking.id
-            );
-
-            setUnreadMap((previous) => ({
-              ...previous,
-              [booking.id]: 0
-            }));
-
-            return;
-          }
-
-          const messagesRef = collection(
-            db,
-            "chats",
-            booking.id,
-            "messages"
-          );
-
-          const unsubscribeMessages = onSnapshot(
-            messagesRef,
-            (messageSnapshot) => {
-              if (!active) return;
-
-              let unreadCount = 0;
-
-              messageSnapshot.docs.forEach((messageDoc) => {
-                const message = messageDoc.data();
-
-                if (
-                  message.senderId !== user.uid &&
-                  !message.seenBy?.includes(user.uid)
-                ) {
-                  unreadCount++;
-                }
-              });
-
-              setUnreadMap((previous) => ({
-                ...previous,
-                [booking.id]: unreadCount
-              }));
-            },
-            (err) => {
-              console.error(
-                "Unread message listener error:",
-                err.code,
-                err.message
-              );
-            }
-          );
-
-          unsubscribers.push(unsubscribeMessages);
-        },
-        (err) => {
-          console.error(
-            "Chat listener error in YourBookings:",
-            err.code,
-            err.message
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || "Unable to fetch unread message counts."
           );
         }
-      );
 
-      unsubscribers.push(unsubscribeChat);
-    });
+        if (active) {
+          setUnreadMap(data.unreadCounts || {});
+        }
+      } catch (error) {
+        console.error("Unread message count error:", error);
+      }
+    };
+
+    // Fetch immediately.
+    fetchUnreadCounts();
+
+    // Refresh unread counts every 5 seconds.
+    const intervalId = setInterval(fetchUnreadCounts, 5000);
 
     return () => {
       active = false;
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      clearInterval(intervalId);
     };
   }, [bookings, user]);
+
 
   // ==========================================
   // CANCEL BOOKING
@@ -372,24 +271,8 @@ function YourBookings() {
         );
       }
 
-      // Retrieve the latest booking data from Firestore.
-      const bookingRef = doc(db, "bookings", bookingId);
-      const bookingSnap = await getDoc(bookingRef);
-
-      if (bookingSnap.exists()) {
-        const updatedBooking = {
-          id: bookingSnap.id,
-          ...bookingSnap.data()
-        };
-
-        setBookings((previous) =>
-          previous.map((booking) =>
-            booking.id === bookingId
-              ? updatedBooking
-              : booking
-          )
-        );
-      }
+      // Refresh the booking information from MongoDB.
+      await fetchBookings(false);
 
       alert("Booking cancelled successfully.");
     } catch (err) {
@@ -489,6 +372,13 @@ function YourBookings() {
         ) : error ? (
           <div className="no-results booking-error">
             <p>{error}</p>
+
+            <button
+              className="home-btn primary"
+              onClick={() => fetchBookings()}
+            >
+              Try Again
+            </button>
           </div>
         ) : bookings.length === 0 ? (
           <div className="no-results">

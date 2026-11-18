@@ -1,33 +1,31 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const crypto = require("crypto");
+
 const router = express.Router();
 
-const db = require("../config/firebase");
+const Ride = require("../models/Ride");
+const Booking = require("../models/Booking");
+const Review = require("../models/Review");
+const Notification = require("../models/Notification");
 const verifyToken = require("../middleware/verifyToken");
 
-// ========================================
-// Authentication Middleware
-// ========================================
-
-// All booking and cancellation routes require Firebase authentication.
 router.use(verifyToken);
 
 // ========================================
-// Helper Functions
+// HELPERS
 // ========================================
 
-// Standardized API error response.
-const sendError = (res, status, message) => {
-  return res.status(status).json({
+const sendError = (res, status, message) =>
+  res.status(status).json({
     success: false,
     error: message,
   });
-};
 
-// Determine refund status.
-// Actual refunds must be processed by a payment gateway.
+const isValidObjectId = (id) =>
+  mongoose.Types.ObjectId.isValid(id);
+
 const getRefundStatus = (booking) => {
-  // Mock/demo payments do not transfer real money.
   if (booking.paymentProvider === "mock") {
     return "not_required";
   }
@@ -42,8 +40,8 @@ const getRefundStatus = (booking) => {
   return "not_required";
 };
 
-// Create a notification document for a user.
-const createNotification = ({
+// Save notifications in MongoDB.
+const createNotification = async ({
   recipientId,
   senderId,
   type,
@@ -52,11 +50,8 @@ const createNotification = ({
   rideId,
   bookingId,
 }) => {
-  const notificationRef = db.collection("notifications").doc();
-
-  return {
-    ref: notificationRef,
-    data: {
+  try {
+    await Notification.create({
       recipientId,
       senderId,
       type,
@@ -65,17 +60,228 @@ const createNotification = ({
       rideId: rideId || null,
       bookingId: bookingId || null,
       read: false,
-      createdAt: new Date(),
-    },
-  };
+    });
+  } catch (error) {
+    console.error("Notification creation error:", error);
+  }
 };
 
+const notifyMany = async (notifications) => {
+  await Promise.all(
+    notifications.map((notification) =>
+      createNotification(notification)
+    )
+  );
+};
+
+const getDepartureDateTime = (ride) => {
+  if (!ride.departureDate || !ride.departureTime) {
+    throw new Error("DEPARTURE_DETAILS_MISSING");
+  }
+
+  const dateTime = new Date(
+    `${ride.departureDate}T${ride.departureTime}:00+05:30`
+  );
+
+  if (Number.isNaN(dateTime.getTime())) {
+    throw new Error("INVALID_DEPARTURE_DETAILS");
+  }
+
+  return dateTime;
+};
+
+
 // ========================================
-// 1. Create Booking
+// GET SINGLE BOOKING FOR CHAT
+// GET /api/bookings/:bookingId
+// ========================================
+
+router.get("/bookings/:bookingId", async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    if (!isValidObjectId(bookingId)) {
+      return sendError(res, 400, "Invalid booking ID.");
+    }
+
+    const booking = await Booking.findById(bookingId).lean();
+
+    if (!booking) {
+      return sendError(res, 404, "Booking not found.");
+    }
+
+    // Only the passenger or driver can access this booking.
+    if (
+      booking.userId !== req.user.uid &&
+      booking.driverId !== req.user.uid
+    ) {
+      return sendError(
+        res,
+        403,
+        "You are not authorized to access this booking."
+      );
+    }
+
+    // Fetch the associated ride from MongoDB.
+    const ride = booking.rideId && isValidObjectId(booking.rideId)
+      ? await Ride.findById(booking.rideId).lean()
+      : null;
+
+    // Check whether a review already exists for this booking.
+    const existingReview = await Review.findOne({
+      bookingId: String(booking._id)
+    })
+      .select("_id")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+
+      booking: {
+        ...booking,
+        id: booking._id.toString()
+      },
+
+      ride: ride
+        ? {
+            ...ride,
+            id: ride._id.toString()
+          }
+        : null,
+
+      alreadyReviewed: Boolean(existingReview)
+    });
+
+  } catch (error) {
+    console.error("Fetch single booking error:", error);
+
+    return sendError(res, 500, "Failed to fetch booking.");
+  }
+});
+
+// ========================================
+// GET BOOKINGS MADE BY LOGGED-IN PASSENGER
+// GET /api/my-bookings
+// ========================================
+
+router.get("/my-bookings", async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      userId: req.user.uid,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const rideIds = [
+      ...new Set(
+        bookings
+          .map((booking) => booking.rideId)
+          .filter((id) => id && isValidObjectId(id))
+          .map(String)
+      ),
+    ];
+
+    const rides = rideIds.length
+      ? await Ride.find({
+          _id: { $in: rideIds },
+        }).lean()
+      : [];
+
+    const bookingIds = bookings.map((booking) =>
+      String(booking._id)
+    );
+
+    const reviews = bookingIds.length
+      ? await Review.find({
+          bookingId: { $in: bookingIds },
+        })
+          .select("bookingId")
+          .lean()
+      : [];
+
+    return res.status(200).json({
+      success: true,
+      bookings: bookings.map((booking) => ({
+        ...booking,
+        id: booking._id.toString(),
+      })),
+      rides: rides.map((ride) => ({
+        ...ride,
+        id: ride._id.toString(),
+      })),
+      reviewedBookingIds: reviews.map((review) =>
+        String(review.bookingId)
+      ),
+    });
+  } catch (error) {
+    console.error("Fetch passenger bookings error:", error);
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch your bookings",
+    });
+  }
+});
+
+
+// ========================================
+// GET BOOKINGS RECEIVED BY LOGGED-IN DRIVER
+// GET /api/driver-bookings
+// ========================================
+
+router.get("/driver-bookings", async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      driverId: req.user.uid,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const rideIds = [
+      ...new Set(
+        bookings
+          .map((booking) => booking.rideId)
+          .filter((id) => id && isValidObjectId(id))
+          .map(String)
+      ),
+    ];
+
+    const rides = rideIds.length
+      ? await Ride.find({
+          _id: { $in: rideIds },
+        }).lean()
+      : [];
+
+    return res.status(200).json({
+      success: true,
+      bookings: bookings.map((booking) => ({
+        ...booking,
+        id: booking._id.toString(),
+      })),
+      rides: rides.map((ride) => ({
+        ...ride,
+        id: ride._id.toString(),
+      })),
+    });
+  } catch (error) {
+    console.error("Fetch driver bookings error:", error);
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch driver bookings",
+    });
+  }
+});
+
+
+// ========================================
+// 1. CREATE BOOKING
 // POST /api/book-ride
 // ========================================
 
 router.post("/book-ride", async (req, res) => {
+  let session;
+
   try {
     const {
       rideId,
@@ -90,21 +296,19 @@ router.post("/book-ride", async (req, res) => {
 
     const passengerId = req.user.uid;
 
-    // Validate ride and passenger count.
     if (
       !rideId ||
+      !isValidObjectId(rideId) ||
       !Number.isInteger(passengerCount) ||
       passengerCount < 1
     ) {
       return sendError(res, 400, "Invalid ride or passenger count.");
     }
 
-    // Validate contact number.
     if (!contact || !/^[6-9]\d{9}$/.test(String(contact))) {
       return sendError(res, 400, "Enter a valid 10-digit mobile number.");
     }
 
-    // Validate luggage selection.
     if (!["yes", "no"].includes(luggage)) {
       return sendError(res, 400, "Invalid luggage selection.");
     }
@@ -114,17 +318,15 @@ router.post("/book-ride", async (req, res) => {
     if (
       !Number.isInteger(bagCount) ||
       bagCount < 0 ||
-      (luggage === "yes" && bagCount < 1)
+      (luggage === "yes" && (bagCount < 1 || bagCount > 20))
     ) {
       return sendError(res, 400, "Enter a valid number of bags.");
     }
 
-    // Validate payment method.
     if (!["cash", "online"].includes(paymentMethod)) {
       return sendError(res, 400, "Invalid payment method.");
     }
 
-    // Validate passenger names.
     if (
       !Array.isArray(passengerNames) ||
       passengerNames.length !== passengerCount ||
@@ -135,31 +337,36 @@ router.post("/book-ride", async (req, res) => {
       return sendError(res, 400, "Enter the name of every passenger.");
     }
 
-    const rideRef = db.collection("rides").doc(rideId);
-    const bookingRef = db.collection("bookings").doc();
+    if (
+      !["window", "middle", "aisle", "standard"].includes(
+        seatType || "standard"
+      )
+    ) {
+      return sendError(res, 400, "Invalid seat preference.");
+    }
 
+    session = await mongoose.startSession();
+
+    let createdBooking;
     let bookingAmount = 0;
+    let driverId;
+    let pickup;
+    let destination;
 
-    await db.runTransaction(async (transaction) => {
-      const rideSnap = await transaction.get(rideRef);
+    await session.withTransaction(async () => {
+      const ride = await Ride.findById(rideId).session(session);
 
-      if (!rideSnap.exists) {
-        throw new Error("RIDE_NOT_FOUND");
-      }
-
-      const ride = rideSnap.data();
-
+      if (!ride) throw new Error("RIDE_NOT_FOUND");
       if (ride.status !== "published") {
         throw new Error("RIDE_NOT_AVAILABLE");
       }
-
       if (ride.userId === passengerId) {
         throw new Error("CANNOT_BOOK_OWN_RIDE");
       }
 
       if (
-        !Number.isInteger(ride.seats) ||
-        ride.seats < passengerCount
+        !Number.isInteger(Number(ride.seats)) ||
+        Number(ride.seats) < passengerCount
       ) {
         throw new Error("NOT_ENOUGH_SEATS");
       }
@@ -180,56 +387,53 @@ router.post("/book-ride", async (req, res) => {
         (totalPrice * passengerCount).toFixed(2)
       );
 
-      transaction.create(bookingRef, {
-        rideId,
-        driverId: ride.userId,
+      driverId = ride.userId;
+      pickup = ride.pickup;
+      destination = ride.destination;
 
+      const booking = new Booking({
+        rideId: ride._id.toString(),
+        driverId: ride.userId,
         userId: passengerId,
         userEmail: req.user.email || "",
         userName: req.user.name || req.user.email || "Passenger",
-
         passengerCount,
         passengerNames: passengerNames.map((name) => name.trim()),
         contact: String(contact),
         luggage,
         bags: bagCount,
         seatType: seatType || "standard",
-
         amount: bookingAmount,
         paymentMethod,
-
         paymentStatus: paymentMethod === "cash" ? "pending" : "unpaid",
         refundStatus: "not_required",
-
         driverEarning: Number(
           (basePrice * passengerCount).toFixed(2)
         ),
         platformFee: Number(
           (serviceFee * passengerCount).toFixed(2)
         ),
-
         status: "pending",
-        createdAt: new Date(),
       });
 
-      // Notify the driver about the booking request.
-      const notification = createNotification({
-        recipientId: ride.userId,
-        senderId: passengerId,
-        type: "booking_request",
-        title: "New booking request",
-        message: `${req.user.name || req.user.email || "A passenger"} requested ${passengerCount} seat(s) for your ride from ${ride.pickup || "your pickup location"} to ${ride.destination || "your destination"}.`,
-        rideId,
-        bookingId: bookingRef.id,
-      });
+      await booking.save({ session });
+      createdBooking = booking;
+    });
 
-      transaction.create(notification.ref, notification.data);
+    await createNotification({
+      recipientId: driverId,
+      senderId: passengerId,
+      type: "booking_request",
+      title: "New booking request",
+      message: `${req.user.name || req.user.email || "A passenger"} requested ${passengerCount} seat(s) for your ride from ${pickup || "your pickup location"} to ${destination || "your destination"}.`,
+      rideId,
+      bookingId: createdBooking._id.toString(),
     });
 
     return res.status(201).json({
       success: true,
       message: "Booking request submitted successfully.",
-      bookingId: bookingRef.id,
+      bookingId: createdBooking._id.toString(),
       amount: bookingAmount,
     });
   } catch (err) {
@@ -248,83 +452,93 @@ router.post("/book-ride", async (req, res) => {
     }
 
     return sendError(res, 500, "Unable to create booking.");
+  } finally {
+    if (session) await session.endSession();
   }
 });
-
 // ========================================
-// 2. Accept Booking
+// 2. ACCEPT BOOKING
 // POST /api/accept-booking
 // ========================================
 
 router.post("/accept-booking", async (req, res) => {
+  let session;
+
   try {
     const { bookingId } = req.body;
     const driverId = req.user.uid;
 
-    if (!bookingId) {
-      return sendError(res, 400, "Booking ID is required.");
+    if (!bookingId || !isValidObjectId(bookingId)) {
+      return sendError(res, 400, "A valid booking ID is required.");
     }
 
-    const bookingRef = db.collection("bookings").doc(bookingId);
+    session = await mongoose.startSession();
 
-    await db.runTransaction(async (transaction) => {
-      const bookingSnap = await transaction.get(bookingRef);
+    let passengerId;
+    let rideId;
 
-      if (!bookingSnap.exists) {
-        throw new Error("BOOKING_NOT_FOUND");
-      }
+    await session.withTransaction(async () => {
+      const booking = await Booking.findById(bookingId).session(session);
 
-      const booking = bookingSnap.data();
-
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
       if (booking.driverId !== driverId) {
         throw new Error("NOT_BOOKING_DRIVER");
       }
-
       if (booking.status !== "pending") {
         throw new Error("BOOKING_ALREADY_PROCESSED");
       }
 
-      const rideRef = db.collection("rides").doc(booking.rideId);
-      const rideSnap = await transaction.get(rideRef);
+      const ride = await Ride.findOneAndUpdate(
+        {
+          _id: booking.rideId,
+          userId: driverId,
+          status: "published",
+          seats: { $gte: booking.passengerCount },
+        },
+        {
+          $inc: { seats: -booking.passengerCount },
+        },
+        {
+          new: true,
+          session,
+          runValidators: true,
+        }
+      );
 
-      if (!rideSnap.exists) {
-        throw new Error("RIDE_NOT_FOUND");
-      }
+      if (!ride) {
+        const existingRide = await Ride.findById(
+          booking.rideId
+        ).session(session);
 
-      const ride = rideSnap.data();
+        if (!existingRide) throw new Error("RIDE_NOT_FOUND");
+        if (existingRide.status !== "published") {
+          throw new Error("RIDE_NOT_AVAILABLE");
+        }
 
-      if (ride.status !== "published") {
-        throw new Error("RIDE_NOT_AVAILABLE");
-      }
-
-      if (ride.seats < booking.passengerCount) {
         throw new Error("NOT_ENOUGH_SEATS");
       }
 
-      const remainingSeats = ride.seats - booking.passengerCount;
+      if (ride.seats === 0) {
+        ride.status = "fully_booked";
+        await ride.save({ session });
+      }
 
-      transaction.update(rideRef, {
-        seats: remainingSeats,
-        status: remainingSeats === 0 ? "fully_booked" : "published",
-      });
+      booking.status = "accepted";
+      booking.acceptedAt = new Date();
+      await booking.save({ session });
 
-      transaction.update(bookingRef, {
-        status: "accepted",
-        acceptedAt: new Date(),
-      });
+      passengerId = booking.userId;
+      rideId = booking.rideId;
+    });
 
-      // Notify the passenger that the driver accepted the booking.
-      const notification = createNotification({
-        recipientId: booking.userId,
-        senderId: driverId,
-        type: "booking_accepted",
-        title: "Booking accepted",
-        message: "The driver has accepted your ride booking request.",
-        rideId: booking.rideId,
-        bookingId,
-      });
-
-      transaction.create(notification.ref, notification.data);
+    await createNotification({
+      recipientId: passengerId,
+      senderId: driverId,
+      type: "booking_accepted",
+      title: "Booking accepted",
+      message: "The driver has accepted your ride booking request.",
+      rideId,
+      bookingId,
     });
 
     return res.json({
@@ -354,11 +568,13 @@ router.post("/accept-booking", async (req, res) => {
     }
 
     return sendError(res, 500, "Unable to accept booking.");
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
 // ========================================
-// 3. Reject Booking
+// 3. REJECT BOOKING
 // POST /api/reject-booking
 // ========================================
 
@@ -367,45 +583,56 @@ router.post("/reject-booking", async (req, res) => {
     const { bookingId } = req.body;
     const driverId = req.user.uid;
 
-    if (!bookingId) {
-      return sendError(res, 400, "Booking ID is required.");
+    if (!bookingId || !isValidObjectId(bookingId)) {
+      return sendError(res, 400, "A valid booking ID is required.");
     }
 
-    const bookingRef = db.collection("bookings").doc(bookingId);
+    const booking = await Booking.findOneAndUpdate(
+      {
+        _id: bookingId,
+        driverId,
+        status: "pending",
+      },
+      {
+        $set: {
+          status: "rejected",
+          rejectedAt: new Date(),
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
-    await db.runTransaction(async (transaction) => {
-      const bookingSnap = await transaction.get(bookingRef);
+    if (!booking) {
+      const existing = await Booking.findById(bookingId);
 
-      if (!bookingSnap.exists) {
-        throw new Error("BOOKING_NOT_FOUND");
+      if (!existing) return sendError(res, 404, "Booking not found.");
+
+      if (existing.driverId !== driverId) {
+        return sendError(
+          res,
+          403,
+          "You are not authorized to reject this booking."
+        );
       }
 
-      const booking = bookingSnap.data();
+      return sendError(
+        res,
+        400,
+        "This booking has already been processed."
+      );
+    }
 
-      if (booking.driverId !== driverId) {
-        throw new Error("NOT_BOOKING_DRIVER");
-      }
-
-      if (booking.status !== "pending") {
-        throw new Error("BOOKING_ALREADY_PROCESSED");
-      }
-
-      const notification = createNotification({
-        recipientId: booking.userId,
-        senderId: driverId,
-        type: "booking_rejected",
-        title: "Booking request rejected",
-        message: "The driver has rejected your booking request.",
-        rideId: booking.rideId,
-        bookingId,
-      });
-
-      transaction.update(bookingRef, {
-        status: "rejected",
-        rejectedAt: new Date(),
-      });
-
-      transaction.create(notification.ref, notification.data);
+    await createNotification({
+      recipientId: booking.userId,
+      senderId: driverId,
+      type: "booking_rejected",
+      title: "Booking request rejected",
+      message: "The driver has rejected your booking request.",
+      rideId: booking.rideId,
+      bookingId,
     });
 
     return res.json({
@@ -414,54 +641,37 @@ router.post("/reject-booking", async (req, res) => {
     });
   } catch (err) {
     console.error("Reject booking error:", err);
-
-    const errors = {
-      BOOKING_NOT_FOUND: [404, "Booking not found."],
-      NOT_BOOKING_DRIVER: [
-        403,
-        "You are not authorized to reject this booking.",
-      ],
-      BOOKING_ALREADY_PROCESSED: [
-        400,
-        "This booking has already been processed.",
-      ],
-    };
-
-    if (errors[err.message]) {
-      return sendError(res, ...errors[err.message]);
-    }
-
     return sendError(res, 500, "Unable to reject booking.");
   }
 });
 
 // ========================================
-// 4. Cancel Booking
+// 4. CANCEL BOOKING
 // POST /api/cancel-booking
-// Only the passenger who made the booking can cancel.
 // ========================================
 
 router.post("/cancel-booking", async (req, res) => {
+  let session;
+
   try {
     const { bookingId } = req.body;
     const passengerId = req.user.uid;
 
-    if (!bookingId) {
-      return sendError(res, 400, "Booking ID is required.");
+    if (!bookingId || !isValidObjectId(bookingId)) {
+      return sendError(res, 400, "A valid booking ID is required.");
     }
 
-    const bookingRef = db.collection("bookings").doc(bookingId);
+    session = await mongoose.startSession();
 
     let refundStatus = "not_required";
+    let driverId;
+    let rideId;
+    let userName;
 
-    await db.runTransaction(async (transaction) => {
-      const bookingSnap = await transaction.get(bookingRef);
+    await session.withTransaction(async () => {
+      const booking = await Booking.findById(bookingId).session(session);
 
-      if (!bookingSnap.exists) {
-        throw new Error("BOOKING_NOT_FOUND");
-      }
-
-      const booking = bookingSnap.data();
+      if (!booking) throw new Error("BOOKING_NOT_FOUND");
 
       if (booking.userId !== passengerId) {
         throw new Error("NOT_BOOKING_PASSENGER");
@@ -471,55 +681,47 @@ router.post("/cancel-booking", async (req, res) => {
         throw new Error("BOOKING_CANNOT_CANCEL");
       }
 
-      let rideRef = null;
-      let ride = null;
-
       if (booking.status === "accepted") {
-        rideRef = db.collection("rides").doc(booking.rideId);
-        const rideSnap = await transaction.get(rideRef);
+        const ride = await Ride.findById(
+          booking.rideId
+        ).session(session);
 
-        if (!rideSnap.exists) {
-          throw new Error("RIDE_NOT_FOUND");
-        }
-
-        ride = rideSnap.data();
+        if (!ride) throw new Error("RIDE_NOT_FOUND");
 
         if (["cancelled", "completed"].includes(ride.status)) {
           throw new Error("RIDE_CANNOT_RESTORE_SEATS");
         }
+
+        ride.seats += booking.passengerCount;
+
+        if (ride.status === "fully_booked") {
+          ride.status = "published";
+        }
+
+        await ride.save({ session });
       }
 
       refundStatus = getRefundStatus(booking);
+      driverId = booking.driverId;
+      rideId = booking.rideId;
+      userName = booking.userName;
 
-      const notification = createNotification({
-        recipientId: booking.driverId,
-        senderId: passengerId,
-        type: "booking_cancelled",
-        title: "Passenger cancelled booking",
-        message: `${booking.userName || "A passenger"} cancelled their booking.`,
-        rideId: booking.rideId,
-        bookingId,
-      });
+      booking.status = "cancelled";
+      booking.cancelledAt = new Date();
+      booking.cancelledBy = "passenger";
+      booking.refundStatus = refundStatus;
 
-      // Restore seats only when the booking had already been accepted.
-      if (booking.status === "accepted" && rideRef && ride) {
-        const restoredSeats = ride.seats + booking.passengerCount;
+      await booking.save({ session });
+    });
 
-        transaction.update(rideRef, {
-          seats: restoredSeats,
-          status:
-            ride.status === "fully_booked" ? "published" : ride.status,
-        });
-      }
-
-      transaction.update(bookingRef, {
-        status: "cancelled",
-        cancelledAt: new Date(),
-        cancelledBy: "passenger",
-        refundStatus,
-      });
-
-      transaction.create(notification.ref, notification.data);
+    await createNotification({
+      recipientId: driverId,
+      senderId: passengerId,
+      type: "booking_cancelled",
+      title: "Passenger cancelled booking",
+      message: `${userName || "A passenger"} cancelled their booking.`,
+      rideId,
+      bookingId,
     });
 
     return res.json({
@@ -536,7 +738,10 @@ router.post("/cancel-booking", async (req, res) => {
         403,
         "You are not authorized to cancel this booking.",
       ],
-      BOOKING_CANNOT_CANCEL: [400, "This booking cannot be cancelled."],
+      BOOKING_CANNOT_CANCEL: [
+        400,
+        "This booking cannot be cancelled.",
+      ],
       RIDE_NOT_FOUND: [404, "Associated ride not found."],
       RIDE_CANNOT_RESTORE_SEATS: [
         400,
@@ -549,38 +754,36 @@ router.post("/cancel-booking", async (req, res) => {
     }
 
     return sendError(res, 500, "Unable to cancel booking.");
+  } finally {
+    if (session) await session.endSession();
   }
 });
-
-// ========================================
-// 5. Cancel Ride
+// 5. CANCEL RIDE
 // POST /api/cancel-ride
-// Only the driver who created the ride can cancel it.
-// Cancels pending and accepted bookings as well.
 // ========================================
 
 router.post("/cancel-ride", async (req, res) => {
+  let session;
+
   try {
     const { rideId } = req.body;
     const driverId = req.user.uid;
 
-    if (!rideId) {
-      return sendError(res, 400, "Ride ID is required.");
+    if (!rideId || !isValidObjectId(rideId)) {
+      return sendError(res, 400, "A valid ride ID is required.");
     }
 
-    const rideRef = db.collection("rides").doc(rideId);
+    session = await mongoose.startSession();
 
-    let affectedBookings = 0;
+    let affectedBookings = [];
     let refundCount = 0;
+    let pickup;
+    let destination;
 
-    await db.runTransaction(async (transaction) => {
-      const rideSnap = await transaction.get(rideRef);
+    await session.withTransaction(async () => {
+      const ride = await Ride.findById(rideId).session(session);
 
-      if (!rideSnap.exists) {
-        throw new Error("RIDE_NOT_FOUND");
-      }
-
-      const ride = rideSnap.data();
+      if (!ride) throw new Error("RIDE_NOT_FOUND");
 
       if (ride.userId !== driverId) {
         throw new Error("NOT_RIDE_DRIVER");
@@ -590,68 +793,53 @@ router.post("/cancel-ride", async (req, res) => {
         throw new Error("RIDE_ALREADY_CLOSED");
       }
 
-      // Read all bookings for this ride before performing any writes.
-      const bookingsQuery = db
-        .collection("bookings")
-        .where("rideId", "==", rideId);
+      pickup = ride.pickup;
+      destination = ride.destination;
 
-      const bookingsSnap = await transaction.get(bookingsQuery);
+      ride.status = "cancelled";
+      ride.seats = 0;
+      ride.cancelledAt = new Date();
+      ride.cancelledBy = "driver";
 
-      const activeBookings = bookingsSnap.docs.filter((bookingDoc) => {
-        const status = bookingDoc.data().status;
-        return ["pending", "accepted"].includes(status);
-      });
+      await ride.save({ session });
 
-      // Each active booking requires one update and one notification.
-      if (activeBookings.length > 240) {
-        throw new Error("TOO_MANY_ACTIVE_BOOKINGS");
-      }
+      affectedBookings = await Booking.find({
+        rideId: ride._id.toString(),
+        status: { $in: ["pending", "accepted"] },
+      }).session(session);
 
-      const now = new Date();
-
-      transaction.update(rideRef, {
-        status: "cancelled",
-        seats: 0,
-        cancelledAt: now,
-        cancelledBy: "driver",
-      });
-
-      for (const bookingDoc of activeBookings) {
-        const booking = bookingDoc.data();
-        const bookingId = bookingDoc.id;
+      for (const booking of affectedBookings) {
         const refundStatus = getRefundStatus(booking);
 
-        const notification = createNotification({
-          recipientId: booking.userId,
-          senderId: driverId,
-          type: "ride_cancelled",
-          title: "Ride cancelled by driver",
-          message: `Your ride from ${ride.pickup || "your pickup location"} to ${ride.destination || "your destination"} has been cancelled by the driver.`,
-          rideId,
-          bookingId,
-        });
-
-        transaction.update(bookingDoc.ref, {
-          status: "cancelled",
-          cancelledAt: now,
-          cancelledBy: "driver",
-          refundStatus,
-        });
-
-        transaction.create(notification.ref, notification.data);
-
-        affectedBookings++;
+        booking.status = "cancelled";
+        booking.cancelledAt = new Date();
+        booking.cancelledBy = "driver";
+        booking.refundStatus = refundStatus;
 
         if (refundStatus === "refund_pending") {
           refundCount++;
         }
+
+        await booking.save({ session });
       }
     });
+
+    await notifyMany(
+      affectedBookings.map((booking) => ({
+        recipientId: booking.userId,
+        senderId: driverId,
+        type: "ride_cancelled",
+        title: "Ride cancelled by driver",
+        message: `Your ride from ${pickup || "your pickup location"} to ${destination || "your destination"} has been cancelled by the driver.`,
+        rideId,
+        bookingId: booking._id.toString(),
+      }))
+    );
 
     return res.json({
       success: true,
       message: "Ride and its active bookings have been cancelled.",
-      affectedBookings,
+      affectedBookings: affectedBookings.length,
       refundCount,
     });
   } catch (err) {
@@ -667,10 +855,6 @@ router.post("/cancel-ride", async (req, res) => {
         400,
         "This ride is already cancelled or completed.",
       ],
-      TOO_MANY_ACTIVE_BOOKINGS: [
-        400,
-        "This ride has too many active bookings to cancel in one operation. Contact support.",
-      ],
     };
 
     if (errors[err.message]) {
@@ -678,135 +862,102 @@ router.post("/cancel-ride", async (req, res) => {
     }
 
     return sendError(res, 500, "Unable to cancel ride.");
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
-// ========================================
-// 6. Complete Ride
+// 6. COMPLETE RIDE
 // POST /api/complete-ride
-// Only the ride's driver can complete the ride.
-// Accepted bookings become completed.
-// Pending bookings are rejected and passengers notified.
 // ========================================
 
 router.post("/complete-ride", async (req, res) => {
+  let session;
+
   try {
     const { rideId } = req.body;
     const driverId = req.user.uid;
 
-    if (!rideId) {
-      return sendError(res, 400, "Ride ID is required.");
+    if (!rideId || !isValidObjectId(rideId)) {
+      return sendError(res, 400, "A valid ride ID is required.");
     }
 
-    const rideRef = db.collection("rides").doc(rideId);
+    session = await mongoose.startSession();
 
-    let completedBookings = 0;
-    let closedPendingBookings = 0;
+    let completedBookings = [];
+    let closedPendingBookings = [];
+    let ridePickup;
+    let rideDestination;
 
-    await db.runTransaction(async (transaction) => {
-      const rideSnap = await transaction.get(rideRef);
+    await session.withTransaction(async () => {
+      const ride = await Ride.findById(rideId).session(session);
 
-      if (!rideSnap.exists) {
-        throw new Error("RIDE_NOT_FOUND");
-      }
-
-      const ride = rideSnap.data();
-
+      if (!ride) throw new Error("RIDE_NOT_FOUND");
       if (ride.userId !== driverId) {
         throw new Error("NOT_RIDE_DRIVER");
       }
-
       if (ride.status === "cancelled") {
         throw new Error("RIDE_CANCELLED");
       }
-
       if (ride.status === "completed") {
         throw new Error("RIDE_ALREADY_COMPLETED");
       }
-
       if (!["published", "fully_booked"].includes(ride.status)) {
         throw new Error("RIDE_NOT_AVAILABLE");
       }
 
-      // Verify the scheduled departure time has passed.
-      if (!ride.departureDate || !ride.departureTime) {
-        throw new Error("DEPARTURE_DETAILS_MISSING");
-      }
-
-      const departureDateTime = new Date(
-        `${ride.departureDate}T${ride.departureTime}:00+05:30`
-      );
-
-      if (Number.isNaN(departureDateTime.getTime())) {
-        throw new Error("INVALID_DEPARTURE_DETAILS");
-      }
+      const departureDateTime = getDepartureDateTime(ride);
 
       if (Date.now() < departureDateTime.getTime()) {
         throw new Error("RIDE_NOT_DEPARTED");
       }
 
-      // Read all bookings before performing transaction writes.
-      const bookingsQuery = db
-        .collection("bookings")
-        .where("rideId", "==", rideId);
+      ride.status = "completed";
+      ride.completedAt = new Date();
 
-      const bookingsSnap = await transaction.get(bookingsQuery);
+      await ride.save({ session });
 
-      const activeBookings = bookingsSnap.docs.filter((bookingDoc) =>
-        ["pending", "accepted"].includes(bookingDoc.data().status)
-      );
+      const activeBookings = await Booking.find({
+        rideId: ride._id.toString(),
+        status: { $in: ["pending", "accepted"] },
+      }).session(session);
 
-      if (activeBookings.length > 240) {
-        throw new Error("TOO_MANY_ACTIVE_BOOKINGS");
-      }
+      ridePickup = ride.pickup;
+      rideDestination = ride.destination;
 
-      const now = new Date();
-
-      transaction.update(rideRef, {
-        status: "completed",
-        completedAt: now,
-      });
-
-      for (const bookingDoc of activeBookings) {
-        const booking = bookingDoc.data();
-
+      for (const booking of activeBookings) {
         if (booking.status === "accepted") {
-          transaction.update(bookingDoc.ref, {
-            status: "completed",
-            completedAt: now,
-          });
-
-          completedBookings++;
-        } else if (booking.status === "pending") {
-          const notification = createNotification({
-            recipientId: booking.userId,
-            senderId: driverId,
-            type: "booking_rejected",
-            title: "Booking request closed",
-            message:
-              "This ride has been completed. Your pending booking request is now closed.",
-            rideId,
-            bookingId: bookingDoc.id,
-          });
-
-          transaction.update(bookingDoc.ref, {
-            status: "rejected",
-            rejectedAt: now,
-            rejectionReason: "ride_completed",
-          });
-
-          transaction.create(notification.ref, notification.data);
-
-          closedPendingBookings++;
+          booking.status = "completed";
+          booking.completedAt = new Date();
+          completedBookings.push(booking);
+        } else {
+          booking.status = "rejected";
+          booking.rejectedAt = new Date();
+          booking.rejectionReason = "ride_completed";
+          closedPendingBookings.push(booking);
         }
+
+        await booking.save({ session });
       }
     });
+
+    await notifyMany(
+      closedPendingBookings.map((booking) => ({
+        recipientId: booking.userId,
+        senderId: driverId,
+        type: "booking_rejected",
+        title: "Booking request closed",
+        message: `The ride from ${ridePickup || "your pickup location"} to ${rideDestination || "your destination"} has been completed. Your pending booking request is now closed.`,
+        rideId,
+        bookingId: booking._id.toString(),
+      }))
+    );
 
     return res.json({
       success: true,
       message: "Ride marked as completed successfully.",
-      completedBookings,
-      closedPendingBookings,
+      completedBookings: completedBookings.length,
+      closedPendingBookings: closedPendingBookings.length,
     });
   } catch (err) {
     console.error("Complete ride error:", err);
@@ -817,8 +968,14 @@ router.post("/complete-ride", async (req, res) => {
         403,
         "You are not authorized to complete this ride.",
       ],
-      RIDE_CANCELLED: [400, "A cancelled ride cannot be completed."],
-      RIDE_ALREADY_COMPLETED: [400, "This ride is already completed."],
+      RIDE_CANCELLED: [
+        400,
+        "A cancelled ride cannot be completed.",
+      ],
+      RIDE_ALREADY_COMPLETED: [
+        400,
+        "This ride is already completed.",
+      ],
       RIDE_NOT_AVAILABLE: [
         400,
         "This ride cannot be completed in its current status.",
@@ -835,10 +992,6 @@ router.post("/complete-ride", async (req, res) => {
         400,
         "You can complete this ride only after its scheduled departure time.",
       ],
-      TOO_MANY_ACTIVE_BOOKINGS: [
-        400,
-        "This ride has too many active bookings to complete in one operation. Contact support.",
-      ],
     };
 
     if (errors[err.message]) {
@@ -846,14 +999,12 @@ router.post("/complete-ride", async (req, res) => {
     }
 
     return sendError(res, 500, "Unable to complete ride.");
+  } finally {
+    if (session) await session.endSession();
   }
 });
-
-// ========================================
-// 7. Submit Review
+// 7. SUBMIT REVIEW
 // POST /api/submit-review
-// Only passengers with completed bookings can review.
-// One review per booking.
 // ========================================
 
 router.post("/submit-review", async (req, res) => {
@@ -861,8 +1012,8 @@ router.post("/submit-review", async (req, res) => {
     const { bookingId, rating, review } = req.body;
     const passengerId = req.user.uid;
 
-    if (!bookingId) {
-      return sendError(res, 400, "Booking ID is required.");
+    if (!bookingId || !isValidObjectId(bookingId)) {
+      return sendError(res, 400, "A valid booking ID is required.");
     }
 
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
@@ -885,64 +1036,62 @@ router.post("/submit-review", async (req, res) => {
       );
     }
 
-    // Booking ID is also the review document ID.
-    // This prevents multiple reviews for the same booking.
-    const bookingRef = db.collection("bookings").doc(bookingId);
-    const reviewRef = db.collection("reviews").doc(bookingId);
+    const booking = await Booking.findById(bookingId);
 
-    await db.runTransaction(async (transaction) => {
-      const bookingSnap = await transaction.get(bookingRef);
+    if (!booking) {
+      return sendError(res, 404, "Booking not found.");
+    }
 
-      if (!bookingSnap.exists) {
-        throw new Error("BOOKING_NOT_FOUND");
-      }
+    if (booking.userId !== passengerId) {
+      return sendError(
+        res,
+        403,
+        "You are not authorized to review this booking."
+      );
+    }
 
-      const booking = bookingSnap.data();
+    if (booking.status !== "completed") {
+      return sendError(
+        res,
+        400,
+        "You can review only completed bookings."
+      );
+    }
 
-      if (booking.userId !== passengerId) {
-        throw new Error("NOT_BOOKING_PASSENGER");
-      }
+    const ride = await Ride.findById(booking.rideId);
 
-      if (booking.status !== "completed") {
-        throw new Error("BOOKING_NOT_COMPLETED");
-      }
+    if (!ride) {
+      return sendError(res, 404, "Associated ride not found.");
+    }
 
-      const rideRef = db.collection("rides").doc(booking.rideId);
-      const rideSnap = await transaction.get(rideRef);
+    if (
+      ride.status !== "completed" ||
+      ride.userId !== booking.driverId
+    ) {
+      return sendError(
+        res,
+        400,
+        "The associated ride has not been completed."
+      );
+    }
 
-      if (!rideSnap.exists) {
-        throw new Error("RIDE_NOT_FOUND");
-      }
+    const existingReview = await Review.findOne({ bookingId });
 
-      const ride = rideSnap.data();
+    if (existingReview) {
+      return sendError(
+        res,
+        409,
+        "You have already reviewed this booking."
+      );
+    }
 
-      if (
-        ride.status !== "completed" ||
-        ride.userId !== booking.driverId
-      ) {
-        throw new Error("RIDE_NOT_COMPLETED");
-      }
-
-      const reviewSnap = await transaction.get(reviewRef);
-
-      if (reviewSnap.exists) {
-        throw new Error("REVIEW_ALREADY_EXISTS");
-      }
-
-      transaction.create(reviewRef, {
-        bookingId,
-        rideId: booking.rideId,
-        driverId: booking.driverId,
-        passengerId,
-        passengerName:
-          booking.userName ||
-          req.user.name ||
-          req.user.email ||
-          "Passenger",
-        rating,
-        review: review.trim(),
-        createdAt: new Date(),
-      });
+    await Review.create({
+      bookingId,
+      rideId: booking.rideId,
+      driverId: booking.driverId,
+      reviewerId: passengerId,
+      rating,
+      review: review.trim(),
     });
 
     return res.status(201).json({
@@ -950,44 +1099,24 @@ router.post("/submit-review", async (req, res) => {
       message: "Review submitted successfully.",
     });
   } catch (err) {
-    console.error("Submit review error:", err);
-
-    const errors = {
-      BOOKING_NOT_FOUND: [404, "Booking not found."],
-      NOT_BOOKING_PASSENGER: [
-        403,
-        "You are not authorized to review this booking.",
-      ],
-      BOOKING_NOT_COMPLETED: [
-        400,
-        "You can review only completed bookings.",
-      ],
-      RIDE_NOT_FOUND: [404, "Associated ride not found."],
-      RIDE_NOT_COMPLETED: [
-        400,
-        "The associated ride has not been completed.",
-      ],
-      REVIEW_ALREADY_EXISTS: [
+    if (err.code === 11000) {
+      return sendError(
+        res,
         409,
-        "You have already reviewed this booking.",
-      ],
-    };
-
-    if (errors[err.message]) {
-      return sendError(res, ...errors[err.message]);
+        "You have already reviewed this booking."
+      );
     }
+
+    console.error("Submit review error:", err);
 
     return sendError(res, 500, "Unable to submit review.");
   }
 });
 
 // ========================================
-// 8. Mock Online Payment (Demo Only)
+
+// 8. MOCK ONLINE PAYMENT (DEMO ONLY)
 // POST /api/mock-payment
-//
-// This endpoint simulates a payment result for development/demo purposes.
-// It does NOT charge a card, process UPI, or transfer real money.
-// The passenger can only update their own online booking.
 // ========================================
 
 router.post("/mock-payment", async (req, res) => {
@@ -995,139 +1124,119 @@ router.post("/mock-payment", async (req, res) => {
     const { bookingId, outcome } = req.body;
     const passengerId = req.user.uid;
 
-    if (!bookingId) {
-      return sendError(res, 400, "Booking ID is required.");
+    if (!bookingId || !isValidObjectId(bookingId)) {
+      return sendError(res, 400, "A valid booking ID is required.");
     }
 
     if (!["success", "failure"].includes(outcome)) {
       return sendError(res, 400, "Invalid demo payment outcome.");
     }
 
-    const bookingRef = db.collection("bookings").doc(bookingId);
-
-    // Generate the transaction ID on the server.
     const transactionId = `MOCK-${crypto.randomUUID()}`;
 
-    let result = null;
+    const booking = await Booking.findById(bookingId);
 
-    await db.runTransaction(async (transaction) => {
-      const bookingSnap = await transaction.get(bookingRef);
+    if (!booking) {
+      return sendError(res, 404, "Booking not found.");
+    }
 
-      if (!bookingSnap.exists) {
-        throw new Error("BOOKING_NOT_FOUND");
-      }
+    if (booking.userId !== passengerId) {
+      return sendError(
+        res,
+        403,
+        "You are not authorized to pay for this booking."
+      );
+    }
 
-      const booking = bookingSnap.data();
+    if (booking.paymentMethod !== "online") {
+      return sendError(
+        res,
+        400,
+        "This booking does not use online payment."
+      );
+    }
 
-      if (booking.userId !== passengerId) {
-        throw new Error("NOT_BOOKING_PASSENGER");
-      }
-
-      if (booking.paymentMethod !== "online") {
-        throw new Error("ONLINE_PAYMENT_NOT_SELECTED");
-      }
-
-      // If already paid, return the existing demo transaction ID.
-      // This makes repeated success requests safe and prevents duplicate payment.
-      if (booking.paymentStatus === "paid") {
-        result = {
-          paymentStatus: "paid",
-          transactionId: booking.paymentTransactionId || null,
-          alreadyPaid: true,
-        };
-
-        return;
-      }
-
-      if (!["pending", "accepted"].includes(booking.status)) {
-        throw new Error("BOOKING_NOT_ACTIVE");
-      }
-
-      if (
-        !["unpaid", "failed", undefined, null].includes(
-          booking.paymentStatus
-        )
-      ) {
-        throw new Error("PAYMENT_NOT_RETRYABLE");
-      }
-
-      const now = new Date();
-
-      if (outcome === "failure") {
-        transaction.update(bookingRef, {
-          paymentStatus: "failed",
-          paymentProvider: "mock",
-          paymentAttemptAt: now,
-          refundStatus: "not_required",
-        });
-
-        result = {
-          paymentStatus: "failed",
-          transactionId: null,
-          alreadyPaid: false,
-        };
-
-        return;
-      }
-
-      transaction.update(bookingRef, {
+    if (booking.paymentStatus === "paid") {
+      return res.json({
+        success: true,
+        message: "Demo payment was already completed. No real money was transferred.",
         paymentStatus: "paid",
-        paymentProvider: "mock",
-        paymentTransactionId: transactionId,
-        paidAt: now,
-        paymentAttemptAt: now,
-        refundStatus: "not_required",
+        transactionId: booking.paymentTransactionId || null,
+        alreadyPaid: true,
+        demo: true,
       });
+    }
 
-      result = {
-        paymentStatus: "paid",
-        transactionId,
+    if (!["pending", "accepted"].includes(booking.status)) {
+      return sendError(
+        res,
+        400,
+        "This booking is no longer active and cannot be paid."
+      );
+    }
+
+    if (
+      !["unpaid", "failed", undefined, null].includes(
+        booking.paymentStatus
+      )
+    ) {
+      return sendError(
+        res,
+        400,
+        "This booking's payment cannot be retried."
+      );
+    }
+
+    const now = new Date();
+
+    if (outcome === "failure") {
+      booking.paymentStatus = "failed";
+      booking.paymentProvider = "mock";
+      booking.paymentAttemptAt = now;
+      booking.refundStatus = "not_required";
+
+      await booking.save();
+
+      return res.json({
+        success: true,
+        message: "Demo payment failed. The booking remains unpaid.",
+        paymentStatus: "failed",
+        transactionId: null,
         alreadyPaid: false,
-      };
-    });
+        demo: true,
+      });
+    }
+
+    booking.paymentStatus = "paid";
+    booking.paymentProvider = "mock";
+    booking.paymentTransactionId = transactionId;
+    booking.paidAt = now;
+    booking.paymentAttemptAt = now;
+    booking.refundStatus = "not_required";
+
+    await booking.save();
 
     return res.json({
       success: true,
-      message:
-        result.paymentStatus === "paid"
-          ? "Demo payment successful. No real money was transferred."
-          : "Demo payment failed. The booking remains unpaid.",
-      ...result,
+      message: "Demo payment successful. No real money was transferred.",
+      paymentStatus: "paid",
+      transactionId,
+      alreadyPaid: false,
       demo: true,
     });
   } catch (err) {
     console.error("Mock payment error:", err);
 
-    const errors = {
-      BOOKING_NOT_FOUND: [404, "Booking not found."],
-      NOT_BOOKING_PASSENGER: [
-        403,
-        "You are not authorized to pay for this booking.",
-      ],
-      ONLINE_PAYMENT_NOT_SELECTED: [
-        400,
-        "This booking does not use online payment.",
-      ],
-      BOOKING_NOT_ACTIVE: [
-        400,
-        "This booking is no longer active and cannot be paid.",
-      ],
-      PAYMENT_NOT_RETRYABLE: [
-        400,
-        "This booking's payment cannot be retried.",
-      ],
-    };
-
-    if (errors[err.message]) {
-      return sendError(res, ...errors[err.message]);
-    }
-
-    return sendError(res, 500, "Unable to process demo payment.");
+    return sendError(
+      res,
+      500,
+      "Unable to process demo payment."
+    );
   }
 });
 
 // ========================================
-// Export Router
+// EXPORT ROUTER
 // ========================================
 
 module.exports = router;

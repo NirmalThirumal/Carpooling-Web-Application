@@ -1,23 +1,11 @@
-import { useEffect, useState, useContext, useRef } from "react";
-import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  updateDoc,
-  arrayUnion
-} from "firebase/firestore";
-import { useParams, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
-import app from "../firebase/config";
-import "../styles/chat.css";
 
-const db = getFirestore(app);
+import { useEffect, useState, useContext, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+
+import { AuthContext } from "../context/AuthContext";
+import authenticatedFetch from "../services/authenticatedFetch";
+
+import "../styles/chat.css";
 
 function Chat() {
   const { bookingId } = useParams();
@@ -33,9 +21,15 @@ function Chat() {
 
   const bottomRef = useRef(null);
 
-  // Initialize chat.
+  // ==========================================
+  // VERIFY BOOKING AND INITIALIZE CHAT
+  // ==========================================
+
   useEffect(() => {
-    if (!bookingId || !user) return;
+    if (!bookingId || !user) {
+      setLoading(false);
+      return;
+    }
 
     let active = true;
 
@@ -44,17 +38,26 @@ function Chat() {
         setLoading(true);
         setError("");
 
-        // Get booking information.
-        const bookingRef = doc(db, "bookings", bookingId);
-        const bookingSnapshot = await getDoc(bookingRef);
+        // Retrieve booking details from MongoDB.
+        const response = await authenticatedFetch(
+          `/api/bookings/${bookingId}`,
+          { method: "GET" }
+        );
 
-        if (!bookingSnapshot.exists()) {
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || "Unable to retrieve booking."
+          );
+        }
+
+        const booking = data.booking;
+
+        if (!booking) {
           throw new Error("Booking not found.");
         }
 
-        const booking = bookingSnapshot.data();
-
-        // Verify the logged-in user.
         const isDriver = booking.driverId === user.uid;
         const isPassenger = booking.userId === user.uid;
 
@@ -64,43 +67,13 @@ function Chat() {
           );
         }
 
-        // Chat is available only after acceptance.
         if (booking.status !== "accepted") {
           throw new Error(
             "Chat is available only for accepted bookings."
           );
         }
 
-        // Use booking ID as the chat document ID.
-        const chatRef = doc(db, "chats", bookingId);
-        const chatSnapshot = await getDoc(chatRef);
-
-        if (!active) return;
-
-        if (chatSnapshot.exists()) {
-          // Existing deterministic chat.
-          const chat = chatSnapshot.data();
-
-          if (
-            chat.driverId !== booking.driverId ||
-            chat.passengerId !== booking.userId
-          ) {
-            throw new Error("Chat participant information is invalid.");
-          }
-
-          setChatId(bookingId);
-        } else {
-          // Create a new chat document.
-          await setDoc(chatRef, {
-            bookingId: bookingId,
-            rideId: booking.rideId,
-            driverId: booking.driverId,
-            passengerId: booking.userId,
-            createdAt: new Date()
-          });
-
-          if (!active) return;
-
+        if (active) {
           setChatId(bookingId);
         }
       } catch (err) {
@@ -125,70 +98,81 @@ function Chat() {
     };
   }, [bookingId, user]);
 
-  // Listen for real-time messages.
+  // ==========================================
+  // FETCH MESSAGES FROM MONGODB
+  // ==========================================
+
   useEffect(() => {
     if (!chatId || !user) return;
 
-    const messagesQuery = query(
-      collection(db, "chats", chatId, "messages"),
-      orderBy("createdAt", "asc")
-    );
+    let active = true;
+    let isFetching = false;
 
-    const unsubscribe = onSnapshot(
-      messagesQuery,
-      (snapshot) => {
-        const messageData = snapshot.docs.map((messageDoc) => ({
-          id: messageDoc.id,
-          ...messageDoc.data()
-        }));
+    const fetchMessages = async () => {
+      if (isFetching) return;
 
-        setMessages(messageData);
+      try {
+        isFetching = true;
 
-        // Mark messages from the other participant as read.
-        snapshot.docs.forEach((messageDoc) => {
-          const message = messageDoc.data();
-
-          if (
-            message.senderId !== user.uid &&
-            !message.seenBy?.includes(user.uid)
-          ) {
-            updateDoc(
-              doc(
-                db,
-                "chats",
-                chatId,
-                "messages",
-                messageDoc.id
-              ),
-              {
-                seenBy: arrayUnion(user.uid)
-              }
-            ).catch((err) => {
-              console.error("Read receipt update error:", err);
-            });
-          }
-        });
-      },
-      (err) => {
-        console.error("Message listener error:", err);
-
-        setError(
-          "Unable to load messages. Please check your Firestore permissions."
+        const response = await authenticatedFetch(
+          `/api/chats/${chatId}/messages`,
+          { method: "GET" }
         );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || "Unable to load messages."
+          );
+        }
+
+        if (active) {
+          setMessages(data.messages || []);
+          setError("");
+        }
+      } catch (err) {
+        console.error("Fetch messages error:", err);
+
+        if (active) {
+          setError(
+            "Unable to load messages. Please try again."
+          );
+        }
+      } finally {
+        isFetching = false;
       }
+    };
+
+    // Fetch immediately when the chat opens.
+    fetchMessages();
+
+    // Refresh messages every 3 seconds.
+    const intervalId = window.setInterval(
+      fetchMessages,
+      3000
     );
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
   }, [chatId, user]);
 
-  // Scroll to the latest message.
+  // ==========================================
+  // SCROLL TO LATEST MESSAGE
+  // ==========================================
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
       behavior: "smooth"
     });
   }, [messages]);
 
-  // Send a message.
+  // ==========================================
+  // SEND MESSAGE TO MONGODB
+  // ==========================================
+
   const sendMessage = async () => {
     const messageText = text.trim();
 
@@ -200,31 +184,56 @@ function Chat() {
       setSending(true);
       setError("");
 
-      await addDoc(
-        collection(db, "chats", chatId, "messages"),
+      const response = await authenticatedFetch(
+        `/api/chats/${chatId}/messages`,
         {
-          senderId: user.uid,
-          senderName: user.displayName || "User",
-          senderEmail: user.email || "",
-          text: messageText,
-          createdAt: new Date(),
-          seenBy: [user.uid]
+          method: "POST",
+          body: JSON.stringify({
+            text: messageText
+          })
         }
       );
 
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Unable to send message."
+        );
+      }
+
       setText("");
+
+      // Refresh immediately to display the saved message.
+      const messagesResponse = await authenticatedFetch(
+        `/api/chats/${chatId}/messages`,
+        { method: "GET" }
+      );
+
+      const messagesData = await messagesResponse.json();
+
+      if (!messagesResponse.ok || !messagesData.success) {
+        throw new Error(
+          messagesData.error || "Unable to refresh messages."
+        );
+      }
+
+      setMessages(messagesData.messages || []);
     } catch (err) {
       console.error("Message sending error:", err);
 
       setError(
-        "Unable to send your message. Please try again."
+        err.message || "Unable to send your message. Please try again."
       );
     } finally {
       setSending(false);
     }
   };
 
-  // Send on Enter; allow Shift + Enter for a new line.
+  // ==========================================
+  // SEND ON ENTER
+  // ==========================================
+
   const handleKeyDown = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -232,7 +241,10 @@ function Chat() {
     }
   };
 
-  // Loading screen.
+  // ==========================================
+  // LOADING SCREEN
+  // ==========================================
+
   if (loading) {
     return (
       <div className="chat-loading">
@@ -241,13 +253,17 @@ function Chat() {
     );
   }
 
-  // Error screen.
+  // ==========================================
+  // ERROR SCREEN
+  // ==========================================
+
   if (error && !chatId) {
     return (
       <div className="chat-loading">
         <div className="chat-error-box">
           <h3>Unable to open chat</h3>
           <p>{error}</p>
+
           <button
             className="back-btn error-back"
             onClick={() => navigate(-1)}
@@ -259,10 +275,12 @@ function Chat() {
     );
   }
 
-  // Chat interface.
+  // ==========================================
+  // CHAT INTERFACE
+  // ==========================================
+
   return (
     <div className="chat-container">
-      {/* Header */}
       <div className="chat-header">
         <button
           className="back-btn"
@@ -270,17 +288,16 @@ function Chat() {
         >
           ← Back
         </button>
+
         <h1>💬 Chat</h1>
       </div>
 
-      {/* Inline Error */}
       {error && (
         <div className="chat-inline-error">
           {error}
         </div>
       )}
 
-      {/* Messages */}
       <div className="chat-messages">
         {messages.length === 0 ? (
           <div className="chat-empty">
@@ -297,7 +314,7 @@ function Chat() {
 
             return (
               <div
-                key={msg.id}
+                key={msg.id || msg._id}
                 className={`message-row ${
                   isMine ? "mine" : "theirs"
                 }`}
@@ -323,7 +340,6 @@ function Chat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Message Input */}
       <div className="chat-input-bar">
         <input
           className="chat-input"

@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import auth from "../firebase/auth";
 import "../styles/admindashboard.css";
 
-const API_URL = "http://localhost:5000/api/admin";
+const API_URL = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "") + "/api/admin";
 
 // Reusable authenticated admin API request
 const adminRequest = async (endpoint, body = {}) => {
@@ -205,7 +207,7 @@ function AdminDashboard() {
   // Delete User Profile
   const deleteUser = async (userId) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this user's Firestore profile?"
+      "Are you sure you want to delete this user's profile?"
     );
 
     if (!confirmed) return;

@@ -1,22 +1,13 @@
+
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where
-} from "firebase/firestore";
+import authenticatedFetch from "../services/authenticatedFetch";
 
 import { useNavigate } from "react-router-dom";
-import app from "../firebase/config";
 import { logout } from "../firebase/auth";
 import NotificationBell from "../components/NotificationBell";
 
 import "../styles/home.css";
-
-const db = getFirestore(app);
 
 function Home() {
   const { user } = useContext(AuthContext);
@@ -35,12 +26,12 @@ function Home() {
   const [passengerQuery, setPassengerQuery] = useState("");
 
   const navigate = useNavigate();
+
   // FETCH PUBLISHED RIDES AND DRIVER RATINGS
   useEffect(() => {
     let isMounted = true;
 
     const fetchRidesAndRatings = async () => {
-
       // Wait for authenticated user.
       if (!user?.uid) {
         setRides([]);
@@ -53,25 +44,26 @@ function Home() {
       setFetchError("");
 
       try {
-        // 1. FETCH PUBLISHED RIDES
-        const publishedRidesQuery = query(
-          collection(db, "rides"),
-          where("status", "==", "published")
-        );
+        // 1. FETCH PUBLISHED RIDES FROM MONGODB
+        const response = await authenticatedFetch("/api/rides");
 
-        const snapshot = await getDocs(publishedRidesQuery);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || "Failed to fetch rides"
+          );
+        }
 
         if (!isMounted) return;
 
-        const ridesData = snapshot.docs.map((document) => ({
-          id: document.id,
-          ...document.data()
-        }));
+        const ridesData = data.rides || [];
 
         // Display rides immediately.
         // Do not wait for driver ratings.
         setRides(ridesData);
         setLoading(false);
+
         // 2. GET UNIQUE DRIVER IDS
         const uniqueDriverIds = [
           ...new Set(
@@ -80,79 +72,92 @@ function Home() {
               .filter(Boolean)
           )
         ];
-        // 3. FETCH DRIVER RATINGS
+
+        // 3. FETCH DRIVER RATINGS FROM MONGODB
         const ratingResults = await Promise.allSettled(
           uniqueDriverIds.map(async (driverId) => {
-
-            const reviewsQuery = query(
-              collection(db, "reviews"),
-              where("driverId", "==", driverId)
+            const ratingResponse = await authenticatedFetch(
+              `/api/drivers/${driverId}`
             );
 
-            const reviewsSnapshot = await getDocs(reviewsQuery);
+            const ratingData = await ratingResponse.json();
 
-            let total = 0;
-            let validRatings = 0;
+            if (!ratingResponse.ok || !ratingData.success) {
+              throw new Error(
+                ratingData.error || "Failed to fetch driver ratings"
+              );
+            }
 
-            reviewsSnapshot.docs.forEach((reviewDoc) => {
+            // Get reviews returned by the MongoDB backend.
+            const reviews = Array.isArray(ratingData.reviews)
+              ? ratingData.reviews
+              : [];
 
-              const rating = Number(reviewDoc.data().rating);
+            const validReviews = reviews.filter((review) => {
+              const rating = Number(review.rating);
 
-              if (
+              return (
                 Number.isFinite(rating) &&
                 rating >= 1 &&
                 rating <= 5
-              ) {
-                total += rating;
-                validRatings++;
-              }
-
+              );
             });
+
+            let rating = null;
+            let count = validReviews.length;
+
+            if (validReviews.length > 0) {
+              const total = validReviews.reduce(
+                (sum, review) => sum + Number(review.rating),
+                0
+              );
+
+              rating = Number(
+                (total / validReviews.length).toFixed(1)
+              );
+            } else if (
+              Number.isFinite(Number(ratingData.averageRating)) &&
+              Number(ratingData.averageRating) > 0
+            ) {
+              rating = Number(
+                Number(ratingData.averageRating).toFixed(1)
+              );
+
+              count = Number(ratingData.reviewCount || 0);
+            }
 
             return {
               driverId,
-
-              rating:
-                validRatings > 0
-                  ? Number((total / validRatings).toFixed(1))
-                  : null,
-
-              count: validRatings
+              rating,
+              count
             };
-
           })
         );
 
         if (!isMounted) return;
+
         // 4. STORE DRIVER RATINGS
         const ratings = {};
 
         ratingResults.forEach((result) => {
-
           if (result.status === "fulfilled") {
-
             const item = result.value;
 
             ratings[item.driverId] = {
               rating: item.rating,
               count: item.count
             };
-
           } else {
-
             console.error(
               "Error fetching a driver's ratings:",
               result.reason
             );
-
           }
-
         });
 
         setRatingsMap(ratings);
 
       } catch (error) {
-
         console.error(
           "Error fetching published rides:",
           error
@@ -165,9 +170,7 @@ function Home() {
 
           setLoading(false);
         }
-
       }
-
     };
 
     fetchRidesAndRatings();
@@ -177,7 +180,9 @@ function Home() {
     };
 
   }, [user?.uid]);
+
   // FILTER PUBLISHED AND AVAILABLE RIDES
+
   // Get today's date using Indian Standard Time.
   const todayInIndia = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",
@@ -190,7 +195,8 @@ function Home() {
 
     // 1. Hide rides scheduled before today.
     const isFutureOrToday =
-      ride.departureDate && ride.departureDate >= todayInIndia;
+      ride.departureDate &&
+      ride.departureDate >= todayInIndia;
 
     // 2. Only show published rides.
     const isPublished = ride.status === "published";
@@ -200,12 +206,16 @@ function Home() {
 
     // 4. Pickup filter.
     const pickupMatch = pickupQuery
-      ? ride.pickup?.toLowerCase().includes(pickupQuery.toLowerCase())
+      ? ride.pickup?.toLowerCase().includes(
+          pickupQuery.toLowerCase()
+        )
       : true;
 
     // 5. Destination filter.
     const destinationMatch = destinationQuery
-      ? ride.destination?.toLowerCase().includes(destinationQuery.toLowerCase())
+      ? ride.destination?.toLowerCase().includes(
+          destinationQuery.toLowerCase()
+        )
       : true;
 
     // 6. Date filter.
@@ -229,6 +239,7 @@ function Home() {
     );
 
   });
+
   // RESET SEARCH FILTERS
   const clearSearch = () => {
 
@@ -238,6 +249,7 @@ function Home() {
     setPassengerQuery("");
 
   };
+
   // HOME PAGE
   return (
 

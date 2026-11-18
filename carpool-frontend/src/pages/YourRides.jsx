@@ -1,21 +1,9 @@
 
 import { useCallback, useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where,
-  onSnapshot,
-  doc
-} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import auth from "../firebase/auth";
-import app from "../firebase/config";
+import authenticatedFetch from "../services/authenticatedFetch";
 import "../styles/yourrides.css";
-
-const db = getFirestore(app);
 
 // ==========================================
 // DATE AND CANCELLATION HELPERS
@@ -90,10 +78,13 @@ function YourRides() {
 
   // ==========================================
   // FETCH DRIVER RIDES AND BOOKING REQUESTS
+  // FROM MONGODB
   // ==========================================
 
   const fetchUserRides = useCallback(async () => {
     if (!user) {
+      setRides([]);
+      setBookingsMap({});
       setLoading(false);
       return;
     }
@@ -102,42 +93,61 @@ function YourRides() {
       setLoading(true);
       setError("");
 
-      // Fetch rides belonging to the logged-in driver.
-      const ridesQuery = query(
-        collection(db, "rides"),
-        where("userId", "==", user.uid)
-      );
-
-      // Fetch bookings using driverId.
-      // This matches the Firestore security rules.
-      const bookingsQuery = query(
-        collection(db, "bookings"),
-        where("driverId", "==", user.uid)
-      );
-
-      const [ridesSnapshot, bookingsSnapshot] = await Promise.all([
-        getDocs(ridesQuery),
-        getDocs(bookingsQuery)
+      // Fetch the logged-in driver's rides and bookings from MongoDB.
+      const [ridesResponse, bookingsResponse] = await Promise.all([
+        authenticatedFetch("/api/my-rides"),
+        authenticatedFetch("/api/driver-bookings")
       ]);
 
-      const ridesData = ridesSnapshot.docs.map((rideDoc) => ({
-        id: rideDoc.id,
-        ...rideDoc.data()
+      const [ridesData, bookingsData] = await Promise.all([
+        ridesResponse.json(),
+        bookingsResponse.json()
+      ]);
+
+      if (!ridesResponse.ok || ridesData.success === false) {
+        throw new Error(
+          ridesData.message ||
+          ridesData.error ||
+          "Unable to fetch your posted rides."
+        );
+      }
+
+      if (!bookingsResponse.ok || bookingsData.success === false) {
+        throw new Error(
+          bookingsData.message ||
+          bookingsData.error ||
+          "Unable to fetch your booking requests."
+        );
+      }
+
+      const ridesList = Array.isArray(ridesData)
+        ? ridesData
+        : ridesData.rides || [];
+
+      const bookingsList = Array.isArray(bookingsData)
+        ? bookingsData
+        : bookingsData.bookings || [];
+
+      // Normalize MongoDB IDs for the existing UI and chat.
+      const ridesDataNormalized = ridesList.map((ride) => ({
+        ...ride,
+        id: String(ride.id || ride._id)
       }));
 
-      const bookingsData = bookingsSnapshot.docs.map((bookingDoc) => ({
-        id: bookingDoc.id,
-        ...bookingDoc.data()
+      const bookingsDataNormalized = bookingsList.map((booking) => ({
+        ...booking,
+        id: String(booking.id || booking._id),
+        rideId: String(booking.rideId)
       }));
 
       // Group bookings according to their rideId.
       const groupedBookings = {};
 
-      ridesData.forEach((ride) => {
+      ridesDataNormalized.forEach((ride) => {
         groupedBookings[ride.id] = [];
       });
 
-      bookingsData.forEach((booking) => {
+      bookingsDataNormalized.forEach((booking) => {
         if (groupedBookings[booking.rideId]) {
           groupedBookings[booking.rideId].push(booking);
         }
@@ -146,22 +156,21 @@ function YourRides() {
       // Sort booking requests by newest first.
       Object.keys(groupedBookings).forEach((rideId) => {
         groupedBookings[rideId].sort((a, b) => {
-          const dateA = a.createdAt?.toDate?.()?.getTime?.() || 0;
-          const dateB = b.createdAt?.toDate?.()?.getTime?.() || 0;
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
 
           return dateB - dateA;
         });
       });
 
-      setRides(ridesData);
+      setRides(ridesDataNormalized);
       setBookingsMap(groupedBookings);
     } catch (err) {
       console.error("Error fetching rides and bookings:", err);
 
       setError(
-        err.code === "permission-denied"
-          ? "Permission denied while loading bookings. Check your Firestore security rules."
-          : "Unable to load your rides and booking requests. Please try again."
+        err.message ||
+        "Unable to load your rides and booking requests. Please try again."
       );
     } finally {
       setLoading(false);
@@ -178,30 +187,16 @@ function YourRides() {
 
   // idField defaults to bookingId.
   // For ride cancellation and completion, pass "rideId".
+
   const sendBookingRequest = async (
     endpoint,
     id,
     idField = "bookingId"
   ) => {
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
-      throw new Error("Please log in again.");
-    }
-
-    const token = await currentUser.getIdToken();
-
-    const response = await fetch(
-      `http://localhost:5000/api/${endpoint}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ [idField]: id })
-      }
-    );
+    const response = await authenticatedFetch(`/api/${endpoint}`, {
+      method: "POST",
+      body: JSON.stringify({ [idField]: id })
+    });
 
     const data = await response.json();
 
@@ -370,6 +365,7 @@ function YourRides() {
 
   // ==========================================
   // UNREAD CHAT MESSAGES
+  // FETCH FROM MONGODB
   // ==========================================
 
   useEffect(() => {
@@ -378,9 +374,6 @@ function YourRides() {
       return;
     }
 
-    const unsubscribers = [];
-    let active = true;
-
     const allBookings = Object.values(bookingsMap).flat();
 
     if (allBookings.length === 0) {
@@ -388,101 +381,38 @@ function YourRides() {
       return;
     }
 
-    allBookings.forEach((booking) => {
-      // Chat document ID is the same as booking ID.
-      const chatRef = doc(db, "chats", booking.id);
+    let active = true;
 
-      const unsubscribeChat = onSnapshot(
-        chatRef,
-        (chatSnapshot) => {
-          if (!active) return;
+    const fetchUnreadCounts = async () => {
+      try {
+        const response = await authenticatedFetch(
+          "/api/chats/unread-counts"
+        );
 
-          // No chat exists yet.
-          if (!chatSnapshot.exists()) {
-            setUnreadMap((previous) => ({
-              ...previous,
-              [booking.id]: 0
-            }));
+        const data = await response.json();
 
-            return;
-          }
-
-          const chat = chatSnapshot.data();
-
-          // Verify that the logged-in user is the driver.
-          if (
-            chat.driverId !== user.uid ||
-            chat.passengerId !== booking.userId
-          ) {
-            console.error(
-              "Chat participant information does not match booking:",
-              booking.id
-            );
-
-            setUnreadMap((previous) => ({
-              ...previous,
-              [booking.id]: 0
-            }));
-
-            return;
-          }
-
-          const messagesRef = collection(
-            db,
-            "chats",
-            booking.id,
-            "messages"
-          );
-
-          const unsubscribeMessages = onSnapshot(
-            messagesRef,
-            (messageSnapshot) => {
-              if (!active) return;
-
-              let unreadCount = 0;
-
-              messageSnapshot.docs.forEach((messageDoc) => {
-                const message = messageDoc.data();
-
-                if (
-                  message.senderId !== user.uid &&
-                  !message.seenBy?.includes(user.uid)
-                ) {
-                  unreadCount++;
-                }
-              });
-
-              setUnreadMap((previous) => ({
-                ...previous,
-                [booking.id]: unreadCount
-              }));
-            },
-            (err) => {
-              console.error(
-                "Unread message listener error in YourRides:",
-                err.code,
-                err.message
-              );
-            }
-          );
-
-          unsubscribers.push(unsubscribeMessages);
-        },
-        (err) => {
-          console.error(
-            "Chat listener error in YourRides:",
-            err.code,
-            err.message
+        if (!response.ok || data.success === false) {
+          throw new Error(
+            data.error || "Unable to retrieve unread messages."
           );
         }
-      );
 
-      unsubscribers.push(unsubscribeChat);
-    });
+        if (active) {
+          setUnreadMap(data.unreadCounts || {});
+        }
+      } catch (err) {
+        console.error("Error fetching unread message counts:", err);
+      }
+    };
+
+    fetchUnreadCounts();
+
+    // Refresh unread counts every 5 seconds.
+    const intervalId = setInterval(fetchUnreadCounts, 5000);
 
     return () => {
       active = false;
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      clearInterval(intervalId);
     };
   }, [bookingsMap, user]);
 

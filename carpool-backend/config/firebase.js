@@ -1,3 +1,4 @@
+
 // ========================================
 // Environment Configuration
 // ========================================
@@ -16,10 +17,5 @@ if (!admin.apps.length) {
   });
 }
 
-// ========================================
-// Firestore Database
-// ========================================
-
-const db = admin.firestore();
-
-module.exports = db;
+// Export Firebase Admin for authentication.
+module.exports = admin;

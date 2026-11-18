@@ -1,22 +1,13 @@
 
 import { useEffect, useState } from "react";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from "firebase/firestore";
-
 import { useParams, useNavigate } from "react-router-dom";
-import app from "../firebase/config";
+import authenticatedFetch from "../services/authenticatedFetch";
 import "../styles/driverprofile.css";
 
-const db = getFirestore(app);
+// ==========================================
+// DATE AND RATING HELPERS
+// ==========================================
 
-// Convert Firestore Timestamp, JavaScript Date, or date string into readable text.
 function formatReviewDate(value) {
   if (!value) return "";
 
@@ -36,7 +27,6 @@ function formatReviewDate(value) {
   });
 }
 
-// Keep only valid ratings between 1 and 5.
 function isValidRating(rating) {
   return (
     typeof rating === "number" &&
@@ -45,6 +35,10 @@ function isValidRating(rating) {
     rating <= 5
   );
 }
+
+// ==========================================
+// DRIVER PROFILE
+// ==========================================
 
 function DriverProfile() {
   const { driverId } = useParams();
@@ -57,7 +51,7 @@ function DriverProfile() {
   const [error, setError] = useState("");
 
   // ==========================================
-  // FETCH DRIVER PROFILE AND REVIEWS
+  // FETCH DRIVER PROFILE FROM MONGODB
   // ==========================================
 
   useEffect(() => {
@@ -74,74 +68,41 @@ function DriverProfile() {
         setLoading(true);
         setError("");
 
-        // Fetch driver profile.
-        const userRef = doc(db, "users", driverId);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          if (active) {
-            setDriver(null);
-            setError("Driver profile not found.");
+        const response = await authenticatedFetch(
+          `/api/drivers/${encodeURIComponent(driverId)}`,
+          {
+            method: "GET"
           }
-          return;
-        }
-
-        const driverData = {
-          id: userSnap.id,
-          ...userSnap.data()
-        };
-
-        // Fetch reviews submitted for this driver.
-        const reviewsQuery = query(
-          collection(db, "reviews"),
-          where("driverId", "==", driverId)
         );
 
-        const reviewsSnapshot = await getDocs(reviewsQuery);
+        const data = await response.json();
 
-        const reviewsData = reviewsSnapshot.docs
-          .map((reviewDoc) => ({
-            id: reviewDoc.id,
-            ...reviewDoc.data()
-          }))
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || "Unable to load driver profile."
+          );
+        }
+
+        if (!active) return;
+
+        const reviewsData = (data.reviews || [])
           .filter((review) => isValidRating(review.rating))
           .sort((a, b) => {
-            const dateA =
-              a.createdAt?.toMillis?.() ||
-              new Date(a.createdAt || 0).getTime() ||
-              0;
-
-            const dateB =
-              b.createdAt?.toMillis?.() ||
-              new Date(b.createdAt || 0).getTime() ||
-              0;
-
-            return dateB - dateA;
+            return (
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime()
+            );
           });
 
-        const totalRating = reviewsData.reduce(
-          (sum, review) => sum + review.rating,
-          0
-        );
-
-        const average =
-          reviewsData.length > 0
-            ? Number((totalRating / reviewsData.length).toFixed(1))
-            : null;
-
-        if (active) {
-          setDriver(driverData);
-          setReviews(reviewsData);
-          setAvgRating(average);
-        }
+        setDriver(data.driver);
+        setReviews(reviewsData);
+        setAvgRating(data.averageRating ?? null);
       } catch (err) {
         console.error("Driver profile fetch error:", err);
 
         if (active) {
           setError(
-            err.code === "permission-denied"
-              ? "Permission denied while loading driver reviews. Please check your Firestore read rules."
-              : "Unable to load the driver profile. Please try again."
+            err.message || "Unable to load the driver profile."
           );
         }
       } finally {
@@ -159,7 +120,7 @@ function DriverProfile() {
   }, [driverId]);
 
   // ==========================================
-  // RATING DISPLAY HELPERS
+  // RATING DISPLAY
   // ==========================================
 
   const renderStars = (rating) => {
@@ -209,7 +170,6 @@ function DriverProfile() {
           </div>
         ) : driver ? (
           <>
-            {/* Driver Information */}
             <div className="driver-info-card">
               <img
                 className="driver-avatar"
@@ -231,12 +191,13 @@ function DriverProfile() {
 
               <div className="driver-rating">
                 <span className="star">⭐</span>
-                {avgRating !== null ? avgRating.toFixed(1) : "New"}
+
+                {avgRating !== null
+                  ? Number(avgRating).toFixed(1)
+                  : "New"}
 
                 {avgRating !== null && (
-                  <span>
-                    {" "} / 5
-                  </span>
+                  <span> / 5</span>
                 )}
               </div>
 
@@ -246,11 +207,8 @@ function DriverProfile() {
               </p>
             </div>
 
-            {/* Driver Reviews */}
             <div className="reviews-section">
-              <h3>
-                Reviews ({reviews.length})
-              </h3>
+              <h3>Reviews ({reviews.length})</h3>
 
               {reviews.length === 0 ? (
                 <p className="reviews-empty">
@@ -282,7 +240,8 @@ function DriverProfile() {
                     )}
 
                     <p className="review-text">
-                      {reviewItem.review || "No written feedback provided."}
+                      {reviewItem.review ||
+                        "No written feedback provided."}
                     </p>
                   </div>
                 ))

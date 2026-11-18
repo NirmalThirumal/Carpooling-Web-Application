@@ -1,8 +1,14 @@
+
 const express = require("express");
+const mongoose = require("mongoose");
+
 const router = express.Router();
 
-const db = require("../config/firebase");
 const verifyToken = require("../middleware/verifyToken");
+
+const User = require("../models/User");
+const Ride = require("../models/Ride");
+const Booking = require("../models/Booking");
 
 // ========================================
 // Admin Configuration
@@ -10,6 +16,7 @@ const verifyToken = require("../middleware/verifyToken");
 
 // Admin emails must be configured in the backend .env file.
 // Example: ADMIN_EMAILS=admin@gmail.com
+
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
@@ -19,7 +26,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
 // Admin Authorization Middleware
 // ========================================
 
-// Verify the Firebase token first, then check the verified email.
 const checkAdmin = (req, res, next) => {
   const userEmail = req.user?.email?.toLowerCase();
 
@@ -42,16 +48,16 @@ router.use(verifyToken, checkAdmin);
 router.post("/stats", async (req, res) => {
   try {
     const [users, rides, bookings] = await Promise.all([
-      db.collection("users").get(),
-      db.collection("rides").get(),
-      db.collection("bookings").get(),
+      User.countDocuments(),
+      Ride.countDocuments(),
+      Booking.countDocuments(),
     ]);
 
     res.json({
       success: true,
-      users: users.size,
-      rides: rides.size,
-      bookings: bookings.size,
+      users,
+      rides,
+      bookings,
     });
   } catch (error) {
     console.error("Admin stats error:", error);
@@ -67,16 +73,22 @@ router.post("/stats", async (req, res) => {
 // ========================================
 
 // Get All Rides
+
 router.post("/rides", async (req, res) => {
   try {
-    const snapshot = await db.collection("rides").get();
+    const rides = await Ride.find()
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const data = snapshot.docs.map((document) => ({
-      id: document.id,
-      ...document.data(),
+    const data = rides.map((ride) => ({
+      ...ride,
+      id: String(ride._id),
     }));
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+    });
   } catch (error) {
     console.error("Admin rides error:", error);
 
@@ -87,19 +99,27 @@ router.post("/rides", async (req, res) => {
 });
 
 // Update Ride Seats
+
 router.post("/update-ride", async (req, res) => {
   try {
     const { rideId, updates } = req.body;
 
-    if (!rideId || typeof rideId !== "string") {
+    if (
+      !rideId ||
+      typeof rideId !== "string" ||
+      !mongoose.isValidObjectId(rideId)
+    ) {
       return res.status(400).json({
         error: "Valid ride ID is required.",
       });
     }
 
     // Only allow the seats field to be changed through this endpoint.
+
     if (
       !updates ||
+      typeof updates !== "object" ||
+      Array.isArray(updates) ||
       Object.keys(updates).length !== 1 ||
       !Object.prototype.hasOwnProperty.call(updates, "seats")
     ) {
@@ -116,16 +136,17 @@ router.post("/update-ride", async (req, res) => {
       });
     }
 
-    const rideRef = db.collection("rides").doc(rideId);
-    const rideDoc = await rideRef.get();
+    const updatedRide = await Ride.findByIdAndUpdate(
+      rideId,
+      { $set: { seats } },
+      { new: true, runValidators: true }
+    );
 
-    if (!rideDoc.exists) {
+    if (!updatedRide) {
       return res.status(404).json({
         error: "Ride not found.",
       });
     }
-
-    await rideRef.update({ seats });
 
     res.json({
       success: true,
@@ -141,26 +162,28 @@ router.post("/update-ride", async (req, res) => {
 });
 
 // Delete Ride
+
 router.post("/delete-ride", async (req, res) => {
   try {
     const { rideId } = req.body;
 
-    if (!rideId || typeof rideId !== "string") {
+    if (
+      !rideId ||
+      typeof rideId !== "string" ||
+      !mongoose.isValidObjectId(rideId)
+    ) {
       return res.status(400).json({
         error: "Valid ride ID is required.",
       });
     }
 
-    const rideRef = db.collection("rides").doc(rideId);
-    const rideDoc = await rideRef.get();
+    const deletedRide = await Ride.findByIdAndDelete(rideId);
 
-    if (!rideDoc.exists) {
+    if (!deletedRide) {
       return res.status(404).json({
         error: "Ride not found.",
       });
     }
-
-    await rideRef.delete();
 
     res.json({
       success: true,
@@ -180,16 +203,22 @@ router.post("/delete-ride", async (req, res) => {
 // ========================================
 
 // Get All Bookings
+
 router.post("/bookings", async (req, res) => {
   try {
-    const snapshot = await db.collection("bookings").get();
+    const bookings = await Booking.find()
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const data = snapshot.docs.map((document) => ({
-      id: document.id,
-      ...document.data(),
+    const data = bookings.map((booking) => ({
+      ...booking,
+      id: String(booking._id),
     }));
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+    });
   } catch (error) {
     console.error("Admin bookings error:", error);
 
@@ -200,26 +229,28 @@ router.post("/bookings", async (req, res) => {
 });
 
 // Delete Booking
+
 router.post("/delete-booking", async (req, res) => {
   try {
     const { bookingId } = req.body;
 
-    if (!bookingId || typeof bookingId !== "string") {
+    if (
+      !bookingId ||
+      typeof bookingId !== "string" ||
+      !mongoose.isValidObjectId(bookingId)
+    ) {
       return res.status(400).json({
         error: "Valid booking ID is required.",
       });
     }
 
-    const bookingRef = db.collection("bookings").doc(bookingId);
-    const bookingDoc = await bookingRef.get();
+    const deletedBooking = await Booking.findByIdAndDelete(bookingId);
 
-    if (!bookingDoc.exists) {
+    if (!deletedBooking) {
       return res.status(404).json({
         error: "Booking not found.",
       });
     }
-
-    await bookingRef.delete();
 
     res.json({
       success: true,
@@ -239,16 +270,22 @@ router.post("/delete-booking", async (req, res) => {
 // ========================================
 
 // Get All Users
+
 router.post("/users", async (req, res) => {
   try {
-    const snapshot = await db.collection("users").get();
+    const users = await User.find()
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const data = snapshot.docs.map((document) => ({
-      id: document.id,
-      ...document.data(),
+    const data = users.map((user) => ({
+      ...user,
+      id: user.uid,
     }));
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+    });
   } catch (error) {
     console.error("Admin users error:", error);
 
@@ -259,6 +296,7 @@ router.post("/users", async (req, res) => {
 });
 
 // Delete User Profile
+
 router.post("/delete-user", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -269,23 +307,25 @@ router.post("/delete-user", async (req, res) => {
       });
     }
 
-    // Prevent the admin from deleting their own profile through this route.
+    // Prevent the admin from deleting their own profile.
+
     if (userId === req.user.uid) {
       return res.status(400).json({
         error: "You cannot delete your own admin profile.",
       });
     }
 
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
+    // User documents are identified by Firebase UID.
 
-    if (!userDoc.exists) {
+    const deletedUser = await User.findOneAndDelete({
+      uid: userId,
+    });
+
+    if (!deletedUser) {
       return res.status(404).json({
         error: "User profile not found.",
       });
     }
-
-    await userRef.delete();
 
     res.json({
       success: true,

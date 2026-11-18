@@ -1,17 +1,10 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  getFirestore,
-  doc,
-  updateDoc
-} from "firebase/firestore";
 
 import { uploadImageToCloudinary } from "../services/cloudinary";
-import app from "../firebase/config";
 import "../styles/ridedetails.css";
-
-const db = getFirestore(app);
+import authenticatedFetch from "../services/authenticatedFetch";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -182,20 +175,31 @@ function RideDetails() {
         throw new Error("Driving licence upload failed.");
       }
 
-      // Update the existing ride document in Firestore.
-      await updateDoc(doc(db, "rides", rideId), {
-        carName: carName.trim(),
-        carImage: carImageUrl,
-        driverName: driverName.trim(),
-        driverContact,
-        driverLicense: driverLicenseUrl,
+      // Update ride details in MongoDB through Express API.
+      const response = await authenticatedFetch(
+        `/api/rides/${rideId}/details`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            carName: carName.trim(),
+            carImage: carImageUrl,
+            driverName: driverName.trim(),
+            driverContact,
+            driverLicense: driverLicenseUrl,
+          }),
+        }
+      );
 
-        // Publish only after all required details are saved.
-        status: "published",
-        updatedAt: new Date()
-      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Failed to save ride details"
+        );
+      }
 
       setSuccess(true);
+
     } catch (error) {
       console.error("Ride details submission error:", error);
 
